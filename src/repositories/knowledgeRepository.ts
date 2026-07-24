@@ -298,6 +298,18 @@ export const knowledgeRepository = {
     return result;
   },
 
+  async applyRetention(days: number): Promise<void> {
+    if (!Number.isFinite(days) || days <= 0) return;
+    const cutoff = Date.now() - Math.floor(days) * 86_400_000;
+    const db = await openAppDatabase();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM sessions WHERE started_at < ?', [cutoff]);
+      await db.runAsync('DELETE FROM insights WHERE session_id IS NULL AND created_at < ?', [cutoff]);
+      await db.runAsync('DELETE FROM summaries WHERE session_id IS NULL AND created_at < ?', [cutoff]);
+      await db.runAsync('DELETE FROM questions WHERE session_id IS NULL AND created_at < ?', [cutoff]);
+    });
+  },
+
   async exportAll(): Promise<Record<string, unknown>> {
     const db = await openAppDatabase();
     const tables = [

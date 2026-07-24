@@ -4,11 +4,15 @@ import { StatusBar } from 'expo-status-bar';
 import { colors } from '../src/design/tokens';
 import { settingsRepository } from '../src/repositories/settingsRepository';
 import { useSettingsStore } from '../src/state/settingsStore';
+import { knowledgeRepository } from '../src/repositories/knowledgeRepository';
 
 export default function RootLayout() {
   const hydrate = useSettingsStore((state) => state.hydrate);
   useEffect(() => {
-    settingsRepository.load().then(hydrate).catch(() => hydrate({}));
+    settingsRepository.load().then(async (settings) => {
+      await knowledgeRepository.applyRetention(settings.dataRetentionDays);
+      hydrate(settings);
+    }).catch(() => hydrate({}));
   }, [hydrate]);
 
   return (
@@ -26,6 +30,8 @@ export default function RootLayout() {
         <Stack.Screen name="settings/privacy" options={{ title: 'Privacy & Data' }} />
         <Stack.Screen name="settings/inference" options={{ title: 'Inference' }} />
         <Stack.Screen name="settings/diagnostics" options={{ title: 'Diagnostics' }} />
+        <Stack.Screen name="session/index" options={{ title: 'Sessions' }} />
+        <Stack.Screen name="summaries/index" options={{ title: 'Summaries' }} />
       </Stack>
     </>
   );

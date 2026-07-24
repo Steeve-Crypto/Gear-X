@@ -7,7 +7,7 @@ import { ActionButton, Panel, Screen, commonStyles } from '../../src/components/
 import { colors, spacing } from '../../src/design/tokens';
 import { CaptureSession } from '../../src/domain/models';
 import { userErrorMessage } from '../../src/domain/errors';
-import { DeviceTranscriptionAdapter } from '../../src/infrastructure/transcription/providers';
+import { DeviceTranscriptionAdapter, LocalWhisperServerProvider } from '../../src/infrastructure/transcription/providers';
 import { useSettingsStore } from '../../src/state/settingsStore';
 import { useSessionStore } from '../../src/state/sessionStore';
 import { getInsightCount } from '../../src/services/database';
@@ -74,9 +74,15 @@ export default function OrbitScreen() {
     setCurrent({ ...current, status: 'processing', updatedAt: Date.now() });
     setActiveAgents(['listener']);
     try {
+      const provider = settings.transcriptionProvider === 'local-whisper-server'
+        ? new LocalWhisperServerProvider(
+            settings.transcriptionEndpoint,
+            () => settings.remoteProcessingConsent,
+          )
+        : new DeviceTranscriptionAdapter();
       const result = await stopAndProcessSession({
         session: current,
-        provider: new DeviceTranscriptionAdapter(),
+        provider,
         retainRecording: settings.retainRecordings,
         currentInsights: insights.current,
         onAgents: (ids) => setActiveAgents(ids as AgentId[]),
@@ -151,6 +157,10 @@ export default function OrbitScreen() {
         <Text style={commonStyles.body}>{transcript}</Text>
       </Panel> : null}
       <Link href="/settings" style={styles.link} accessibilityRole="link">Settings and privacy</Link>
+      <View style={styles.actions}>
+        <Link href="/session" style={styles.link} accessibilityRole="link">Session history</Link>
+        <Link href="/summaries" style={styles.link} accessibilityRole="link">Summaries</Link>
+      </View>
     </Screen>
   );
 }

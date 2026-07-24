@@ -14,4 +14,4 @@ Migration and cascade integration tests.
 ## Rollback considerations
 Transactions roll back failed migration; schema migrations are forward-only.
 ## Completion status
-Pending.
+In progress: normalized forward migration and legacy-column preservation implemented; device migration tests remain.

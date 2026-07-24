@@ -13,7 +13,9 @@ export const defaultSettings: AppSettings = {
   ollamaEndpoint: 'http://localhost:11434',
   ollamaModel: 'qwen2.5:3b',
   transcriptionProvider: 'device-adapter',
+  transcriptionEndpoint: 'http://localhost:8080',
   voiceProvider: 'none',
+  dataRetentionDays: 0,
 };
 
 interface SettingsState extends AppSettings {

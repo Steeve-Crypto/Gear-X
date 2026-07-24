@@ -1,6 +1,6 @@
 import { Alert, Switch, Text, View } from 'react-native';
 import { useState } from 'react';
-import { ActionButton, Panel, Screen, commonStyles } from '../../src/components/primitives';
+import { ActionButton, Field, Panel, Screen, commonStyles } from '../../src/components/primitives';
 import { colors } from '../../src/design/tokens';
 import { clearAllData } from '../../src/services/database';
 import { knowledgeRepository } from '../../src/repositories/knowledgeRepository';
@@ -37,6 +37,19 @@ export default function PrivacyScreen() {
         <Text style={commonStyles.body}>
           When enabled, configured remote providers may receive the minimum selected audio or text. No remote provider is configured by default.
         </Text>
+      </Panel>
+      <Panel>
+        <Text style={commonStyles.label}>Knowledge retention days</Text>
+        <Field
+          keyboardType="number-pad"
+          value={String(settings.dataRetentionDays)}
+          onChangeText={(value) => {
+            const days = Math.max(0, Number.parseInt(value || '0', 10) || 0);
+            void save({ dataRetentionDays: days }).then(() => knowledgeRepository.applyRetention(days));
+          }}
+          accessibilityLabel="Knowledge retention days"
+        />
+        <Text style={commonStyles.body}>Use 0 to retain knowledge until you delete it. Older records are removed when this changes and at app start.</Text>
       </Panel>
       <Panel>
         <Toggle label="Retain recordings" value={settings.retainRecordings}

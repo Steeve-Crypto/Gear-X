@@ -123,4 +123,30 @@ export const sessionRepository = {
     const db = await openAppDatabase();
     await db.runAsync('DELETE FROM sessions WHERE id = ?', [id]);
   },
+
+  async export(id: string): Promise<Record<string, unknown> | null> {
+    const db = await openAppDatabase();
+    const session = await db.getFirstAsync('SELECT * FROM sessions WHERE id = ?', [id]);
+    if (!session) return null;
+    const [segments, insights, summaries, questions, runs, providerRuns] = await Promise.all([
+      db.getAllAsync('SELECT * FROM transcript_segments WHERE session_id = ? ORDER BY start_ms', [id]),
+      db.getAllAsync('SELECT * FROM insights WHERE session_id = ? ORDER BY created_at', [id]),
+      db.getAllAsync('SELECT * FROM summaries WHERE session_id = ? ORDER BY created_at', [id]),
+      db.getAllAsync('SELECT * FROM questions WHERE session_id = ? ORDER BY created_at', [id]),
+      db.getAllAsync('SELECT * FROM agent_runs WHERE session_id = ? ORDER BY started_at', [id]),
+      db.getAllAsync('SELECT * FROM provider_runs WHERE session_id = ? ORDER BY started_at', [id]),
+    ]);
+    return {
+      format: 'gear-x-session',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      session,
+      transcriptSegments: segments,
+      insights,
+      summaries,
+      questions,
+      agentRuns: runs,
+      providerRuns,
+    };
+  },
 };

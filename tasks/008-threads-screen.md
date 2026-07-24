@@ -14,4 +14,4 @@ Relationship creation, duplicate prevention, unlink, UI detail.
 ## Rollback considerations
 Preserve thread records if graph UI is disabled.
 ## Completion status
-Pending.
+In progress: explicit persisted relationships and inspectable detail are implemented; manual link editing remains.

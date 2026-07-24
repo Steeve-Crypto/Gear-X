@@ -86,5 +86,7 @@ export interface AppSettings {
   ollamaEndpoint: string;
   ollamaModel: string;
   transcriptionProvider: string;
+  transcriptionEndpoint: string;
   voiceProvider: string;
+  dataRetentionDays: number;
 }

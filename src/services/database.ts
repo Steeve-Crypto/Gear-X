@@ -239,3 +239,16 @@ export async function clearAllData(): Promise<void> {
     `);
   });
 }
+
+export async function updateSummary(id: string, title: string, body: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    'UPDATE summaries SET title = ?, body = ?, updated_at = ? WHERE id = ?',
+    [title.trim(), body.trim(), Date.now(), id],
+  );
+}
+
+export async function deleteSummary(id: string): Promise<void> {
+  const database = await getDb();
+  await database.runAsync('DELETE FROM summaries WHERE id = ?', [id]);
+}

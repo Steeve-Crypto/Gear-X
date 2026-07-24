@@ -14,4 +14,4 @@ Mock, cancellation, unavailable, consent, invalid result.
 ## Rollback considerations
 Captured recording/session remains recoverable after provider failure.
 ## Completion status
-Pending.
+In progress: device boundary, deterministic mock, local Whisper server, secure backend, cancellation, and consent paths implemented; native provider remains.

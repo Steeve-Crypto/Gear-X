@@ -14,4 +14,4 @@ Session lifecycle, metadata, cascade, export.
 ## Rollback considerations
 Never remove legacy insights; feature can be disabled while records remain.
 ## Completion status
-Pending.
+In progress: lifecycle, transcript persistence, history, export, and cascade deletion implemented; recovery/device tests remain.

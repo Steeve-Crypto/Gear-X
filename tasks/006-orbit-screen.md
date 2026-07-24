@@ -14,4 +14,4 @@ Permission, start/pause/stop, processing, empty/error/reduced motion.
 ## Rollback considerations
 Capture service remains independent of the visualization.
 ## Completion status
-Pending.
+In progress: capture controls, status, real session state, agent signals, and motion modes implemented; physical-device verification remains.

@@ -14,4 +14,4 @@ Decisions, dependencies, duplicate keys, timeout, cancellation, loop cap.
 ## Rollback considerations
 Legacy direct agents remain adapter-compatible during migration.
 ## Completion status
-Pending.
+In progress: ordering, dedupe, timeout, cancellation, events, and persisted runs implemented; runtime failure tests remain.

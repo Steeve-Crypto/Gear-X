@@ -34,6 +34,65 @@ export class MockTranscriptionProvider implements TranscriptionProvider {
   }
 }
 
+export class LocalWhisperServerProvider implements TranscriptionProvider {
+  id = 'local-whisper-server';
+  name = 'Local Whisper server';
+  remote = true;
+
+  constructor(
+    private readonly baseUrl: string,
+    private readonly hasRemoteConsent: () => boolean,
+  ) {}
+
+  async isAvailable(): Promise<boolean> {
+    if (!canUseProvider(this.remote, this.hasRemoteConsent())) return false;
+    try {
+      const response = await fetch(`${this.baseUrl}/health`);
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async transcribe(input: TranscriptionInput): Promise<TranscriptionResult> {
+    if (!canUseProvider(this.remote, this.hasRemoteConsent())) {
+      throw new GearXError('REMOTE_CONSENT_MISSING', 'Local-network transcription needs consent.');
+    }
+    const body = new FormData();
+    body.append('session_id', input.sessionId);
+    body.append('file', {
+      uri: input.audioUri,
+      name: `${input.sessionId}.m4a`,
+      type: 'audio/m4a',
+    } as unknown as Blob);
+    const response = await fetch(`${this.baseUrl}/v1/transcriptions`, {
+      method: 'POST',
+      body,
+      signal: input.signal,
+    });
+    if (!response.ok) {
+      throw new GearXError('TRANSCRIPTION_FAILED', `Local Whisper returned ${response.status}.`);
+    }
+    const payload = (await response.json()) as {
+      text?: string;
+      confidence?: number;
+      segments?: TranscriptionResult['segments'];
+    };
+    if (!payload.text) throw new GearXError('TRANSCRIPTION_FAILED', 'Local Whisper returned no text.');
+    return {
+      text: payload.text,
+      confidence: payload.confidence ?? null,
+      segments: payload.segments?.length ? payload.segments : [{
+        text: payload.text,
+        startMs: 0,
+        endMs: 0,
+        confidence: payload.confidence ?? null,
+        speakerLabel: null,
+      }],
+    };
+  }
+}
+
 export interface BackendTranscriptionConfig {
   baseUrl: string;
   getAccessToken: () => Promise<string>;

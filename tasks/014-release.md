@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-Pending.
+In progress: install, validation, Expo config, and Android export pass; physical Android/iOS checks and production audit remain.

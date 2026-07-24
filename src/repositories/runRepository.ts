@@ -54,7 +54,7 @@ export const runRepository = {
     );
   },
 
-  async recentAgentRuns(limit = 10): Promise<Array<Record<string, unknown>>> {
+  async recentAgentRuns(limit = 10): Promise<Record<string, unknown>[]> {
     const db = await openAppDatabase();
     return db.getAllAsync(
       `SELECT agent_id, status, duration_ms, error_code, error_message, started_at

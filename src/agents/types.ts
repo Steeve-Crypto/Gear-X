@@ -58,7 +58,42 @@ export interface AgentContext {
 export interface AgentResult {
   agentId: AgentId;
   success: boolean;
-  data?: any;
+  data?: {
+    activeAgents?: AgentId[];
+    reason?: string;
+    status?: string;
+    transcript?: string;
+    confidence?: number;
+    speakers?: string[];
+    insights?: Insight[];
+    source?: string;
+    threads?: unknown[];
+    threadCount?: number;
+    message?: string;
+    summary?: {
+      id: string;
+      title: string;
+      body: string;
+      insightIds: string[];
+      insightCount: number;
+      source: 'llm' | 'rules';
+      createdAt: number;
+      sessionId?: string | null;
+      threadId?: string | null;
+      updatedAt?: number;
+    } | null;
+    questions?: string[];
+    count?: number;
+    answer?: string | null;
+    matches?: Insight[];
+    matchCount?: number;
+    retrievalQuality?: number;
+    query?: string;
+    saved?: number;
+    totalStored?: number;
+    commands?: VisualizerCommand[];
+    stage?: number;
+  };
   events?: KnowledgeEvent[];
   visualCommands?: VisualizerCommand[];
   error?: string;

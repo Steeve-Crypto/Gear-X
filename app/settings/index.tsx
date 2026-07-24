@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, Switch, Text, View } from 'react-native';
 import { Panel, Screen, commonStyles } from '../../src/components/primitives';
-import { colors, spacing } from '../../src/design/tokens';
+import { colors } from '../../src/design/tokens';
 import { settingsRepository } from '../../src/repositories/settingsRepository';
 import { useSettingsStore } from '../../src/state/settingsStore';
 import { AppSettings } from '../../src/domain/models';

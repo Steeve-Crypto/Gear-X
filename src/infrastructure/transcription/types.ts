@@ -8,13 +8,13 @@ export interface TranscriptionInput {
 export interface TranscriptionResult {
   text: string;
   confidence: number | null;
-  segments: Array<{
+  segments: {
     text: string;
     startMs: number;
     endMs: number;
     confidence: number | null;
     speakerLabel: string | null;
-  }>;
+  }[];
 }
 
 export interface TranscriptionProvider {

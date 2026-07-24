@@ -25,4 +25,4 @@ EAS project credentials, store metadata, native transcription module, crash repo
 ## Verification method
 Release checklist with command output and device evidence.
 
-Current status: implementation in progress. No device verification has been claimed.
+Current status: automated validation and Android Metro/Hermes export pass. Physical Android/iOS verification, native transcription selection, and production dependency audit remain open. No device verification has been claimed.

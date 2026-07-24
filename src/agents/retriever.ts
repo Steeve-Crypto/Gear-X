@@ -1,4 +1,4 @@
-import { Agent, AgentContext, AgentResult, Insight } from './types';
+import { Agent, AgentContext, AgentResult } from './types';
 import { searchInsights } from '../services/database';
 import { callLocalLLM } from '../services/llm';
 import { rankEvidence, retrievalQuality } from '../domain/retrieval';
@@ -83,12 +83,12 @@ Do not invent facts.`;
           query,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Retriever] Failed:', error);
       return {
         agentId: 'retriever',
         success: false,
-        error: error?.message || 'Retrieval failed',
+        error: error instanceof Error ? error.message : 'Retrieval failed',
       };
     }
   },

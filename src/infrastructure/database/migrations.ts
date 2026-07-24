@@ -172,7 +172,7 @@ async function ensureColumn(
 }
 
 async function upgradeLegacyColumns(db: SQLite.SQLiteDatabase) {
-  const additions: Array<[string, string]> = [
+  const additions: [string, string][] = [
     ['session_id', 'TEXT REFERENCES sessions(id) ON DELETE CASCADE'],
     ['source_segment_ids', "TEXT NOT NULL DEFAULT '[]'"],
     ['pinned', 'INTEGER NOT NULL DEFAULT 0'],
@@ -184,7 +184,7 @@ async function upgradeLegacyColumns(db: SQLite.SQLiteDatabase) {
     await ensureColumn(db, 'insights', name, definition);
   }
 
-  const summaryAdditions: Array<[string, string]> = [
+  const summaryAdditions: [string, string][] = [
     ['session_id', 'TEXT REFERENCES sessions(id) ON DELETE CASCADE'],
     ['thread_id', 'TEXT'],
     ['scope', "TEXT NOT NULL DEFAULT 'session'"],

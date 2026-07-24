@@ -14,10 +14,6 @@ export const archivistAgent: Agent = {
 
   async run(ctx: AgentContext): Promise<AgentResult> {
     try {
-      const newOnes = ctx.currentInsights.filter(
-        (ins) => !ins.id.startsWith('loaded_') // simple guard; real system would track dirty flags
-      );
-
       // In practice the pipeline passes only the freshly extracted ones,
       // but we accept the full list and upsert.
       const toSave = ctx.currentInsights;
@@ -39,12 +35,12 @@ export const archivistAgent: Agent = {
           message: `Archived ${saved} insight(s). Total in vault: ${total}`,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Archivist] Failed:', error);
       return {
         agentId: 'archivist',
         success: false,
-        error: error?.message || 'SQLite write failed',
+        error: error instanceof Error ? error.message : 'SQLite write failed',
       };
     }
   },

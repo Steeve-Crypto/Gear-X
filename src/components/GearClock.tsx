@@ -98,7 +98,7 @@ export function GearClock({
     return () => {
       [coreRot, orbit1, orbit2, orbit3, orbit4, pulse].forEach(cancelAnimation);
     };
-  }, [isListening, reducedMotion]);
+  }, [coreRot, isListening, orbit1, orbit2, orbit3, orbit4, pulse, reducedMotion]);
 
   const coreProps = useAnimatedProps(() => ({
     transform: [{ rotate: `${coreRot.value}deg` }],
@@ -148,6 +148,11 @@ export function GearClock({
   const showRings = !lowPerformanceMode && insightCount >= 2;
   const isProcessing = activeAgents.some((id) => id !== 'listener' && id !== 'visualizer');
   const hasOpenLoops = activeAgents.includes('questioner');
+  const extracting = activeAgents.includes('extractor');
+  const weaving = activeAgents.includes('weaver');
+  const archiving = activeAgents.includes('archivist');
+  const retrieving = activeAgents.includes('retriever');
+  const summarizing = activeAgents.includes('summarizer');
 
   return (
     <View style={styles.container}>
@@ -209,6 +214,24 @@ export function GearClock({
         {hasOpenLoops && (
           <Circle cx="160" cy="34" r="4" fill="#c97063" stroke="#e9e1d2" strokeWidth="1" />
         )}
+        {extracting && (
+          <Circle cx="160" cy="160" r="48" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="5 3" />
+        )}
+        {weaving && (
+          <>
+            <Line x1="160" y1="160" x2="232" y2="160" stroke="#b88945" strokeWidth="1.5" />
+            <Line x1="160" y1="160" x2="92" y2="88" stroke="#b88945" strokeWidth="1" />
+          </>
+        )}
+        {retrieving && (
+          <Circle cx="160" cy="160" r="139" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="22 9" />
+        )}
+        {summarizing && (
+          <>
+            <Circle cx="160" cy="160" r="58" fill="none" stroke="#e9e1d2" strokeWidth="1.5" />
+            <Circle cx="160" cy="160" r="50" fill="none" stroke="#b88945" strokeWidth="1.5" />
+          </>
+        )}
 
         {/* === CENTRAL CORE (Sun / Clock Heart) === */}
         <AnimatedG animatedProps={coreProps} origin="160, 160">
@@ -219,6 +242,7 @@ export function GearClock({
             strokeWidth="1.5"
           />
           <Circle cx="160" cy="160" r="18" fill="url(#coreGlow)" />
+          {archiving && <Circle cx="160" cy="160" r="14" fill="none" stroke="#e9e1d2" strokeWidth="2" />}
           <Circle cx="160" cy="160" r="7" fill="#1a1008" />
           <Circle cx="160" cy="160" r="3" fill="#f0a040" />
         </AnimatedG>

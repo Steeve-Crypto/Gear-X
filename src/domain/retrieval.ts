@@ -16,7 +16,7 @@ export function tokenize(value: string): string[] {
   )];
 }
 
-export function rankEvidence<T extends RankableEvidence>(query: string, items: T[]): Array<T & { score: number }> {
+export function rankEvidence<T extends RankableEvidence>(query: string, items: T[]): (T & { score: number })[] {
   const queryTokens = tokenize(query);
   if (!queryTokens.length) return [];
   return items

@@ -5,7 +5,6 @@ import { AgentId, Insight } from '../../src/agents/types';
 import { GearClock } from '../../src/components/GearClock';
 import { ActionButton, Panel, Screen, commonStyles } from '../../src/components/primitives';
 import { colors, spacing } from '../../src/design/tokens';
-import { CaptureSession } from '../../src/domain/models';
 import { userErrorMessage } from '../../src/domain/errors';
 import { DeviceTranscriptionAdapter, LocalWhisperServerProvider } from '../../src/infrastructure/transcription/providers';
 import { useSettingsStore } from '../../src/state/settingsStore';

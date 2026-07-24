@@ -16,7 +16,7 @@ export class OllamaProvider implements InferenceProvider {
     try {
       const response = await fetch(`${this.baseUrl}/api/tags`, { signal });
       if (!response.ok) return false;
-      const payload = (await response.json()) as { models?: Array<{ name?: string }> };
+      const payload = (await response.json()) as { models?: { name?: string }[] };
       return Boolean(payload.models?.some((item) => item.name?.startsWith(this.model)));
     } catch {
       return false;

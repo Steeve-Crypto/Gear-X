@@ -1,5 +1,4 @@
 import { Audio } from 'expo-av';
-import { Platform } from 'react-native';
 
 /**
  * Audio Service for Gear X

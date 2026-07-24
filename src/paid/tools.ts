@@ -151,7 +151,10 @@ export async function executeGearXTool(
       default:
         return { ok: false, result: { error: `Unknown tool: ${name}` } };
     }
-  } catch (e: any) {
-    return { ok: false, result: { error: e?.message || 'Tool failed' } };
+  } catch (error: unknown) {
+    return {
+      ok: false,
+      result: { error: error instanceof Error ? error.message : 'Tool failed' },
+    };
   }
 }

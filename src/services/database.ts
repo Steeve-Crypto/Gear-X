@@ -214,7 +214,7 @@ export async function loadAllSummaries(): Promise<SummaryRecord[]> {
   }));
 }
 
-export async function logEvent(type: string, payload: any): Promise<void> {
+export async function logEvent(type: string, payload: unknown): Promise<void> {
   const database = await getDb();
   await database.runAsync(
     'INSERT INTO knowledge_events (type, payload, timestamp) VALUES (?, ?, ?)',

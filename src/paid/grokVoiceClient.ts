@@ -24,6 +24,19 @@ import { Insight } from '../agents/types';
 
 const REALTIME_URL = 'wss://api.x.ai/v1/realtime?model=grok-voice-latest';
 
+interface RealtimeEvent {
+  type?: string;
+  delta?: unknown;
+  transcript?: unknown;
+  text?: unknown;
+  error?: { message?: string };
+  name?: unknown;
+  arguments?: unknown;
+  call_id?: unknown;
+  id?: unknown;
+  function_call?: { name?: unknown; arguments?: unknown };
+}
+
 export interface GrokVoiceConfig {
   /** Ephemeral token from your backend — NOT the long-lived API key */
   ephemeralToken: string;
@@ -177,9 +190,9 @@ export class GrokVoiceClient {
   }
 
   private async handleMessage(raw: string) {
-    let event: any;
+    let event: RealtimeEvent;
     try {
-      event = JSON.parse(raw);
+      event = JSON.parse(raw) as RealtimeEvent;
     } catch {
       return;
     }
@@ -231,7 +244,7 @@ export class GrokVoiceClient {
     }
   }
 
-  private async handleToolCall(event: any) {
+  private async handleToolCall(event: RealtimeEvent) {
     const name = (event.name || event.function_call?.name) as ToolName | undefined;
     let args: Record<string, unknown> = {};
     try {

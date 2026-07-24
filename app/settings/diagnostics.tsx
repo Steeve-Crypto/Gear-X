@@ -12,7 +12,7 @@ export default function DiagnosticsScreen() {
   const lastError = useSessionStore((state) => state.lastError);
   const [version, setVersion] = useState(0);
   const [counts, setCounts] = useState<Record<string, number>>({});
-  const [runs, setRuns] = useState<Array<Record<string, unknown>>>([]);
+  const [runs, setRuns] = useState<Record<string, unknown>[]>([]);
   useEffect(() => {
     getDatabaseVersion().then(setVersion).catch(() => setVersion(-1));
     knowledgeRepository.counts().then(setCounts).catch(() => setCounts({}));

@@ -27,13 +27,13 @@ export const weaverAgent: Agent = {
       byType.set(insight.type, [...(byType.get(insight.type) ?? []), insight]);
     }
 
-    const threads: Array<{
+    const threads: {
       id: string;
       theme: string;
       count: number;
       rationale: string;
       insightIds: string[];
-    }> = [];
+    }[] = [];
     for (const [type, related] of byType) {
       if (related.length < 2) continue;
       const rationale =

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Link, useFocusEffect } from 'expo-router';
 import { EmptyState, Field, Panel, Screen, commonStyles } from '../../src/components/primitives';
-import { colors, spacing } from '../../src/design/tokens';
+import { colors } from '../../src/design/tokens';
 import { VaultInsight } from '../../src/domain/models';
 import { knowledgeRepository } from '../../src/repositories/knowledgeRepository';
 

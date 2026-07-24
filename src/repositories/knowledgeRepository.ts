@@ -40,7 +40,7 @@ export const knowledgeRepository = {
   async insights(query: InsightQuery = {}): Promise<VaultInsight[]> {
     const db = await openAppDatabase();
     const clauses: string[] = [];
-    const params: Array<string | number> = [];
+    const params: (string | number)[] = [];
     if (!query.includeArchived) clauses.push('archived = 0');
     if (query.search?.trim()) {
       clauses.push('(content LIKE ? OR type LIKE ?)');
@@ -129,12 +129,12 @@ export const knowledgeRepository = {
     title: string;
     description: string;
     confidence: number;
-    links: Array<{
+    links: {
       insightId: string;
       relationship: string;
       rationale: string;
       confidence: number;
-    }>;
+    }[];
   }): Promise<string> {
     const db = await openAppDatabase();
     const id = input.id ?? createId('thread');
@@ -164,7 +164,7 @@ export const knowledgeRepository = {
 
   async thread(id: string): Promise<{
     thread: KnowledgeThread;
-    links: Array<VaultInsight & { relationship: string; rationale: string; linkConfidence: number }>;
+    links: (VaultInsight & { relationship: string; rationale: string; linkConfidence: number })[];
   } | null> {
     const db = await openAppDatabase();
     const row = await db.getFirstAsync<Record<string, unknown>>(
@@ -196,13 +196,13 @@ export const knowledgeRepository = {
     };
   },
 
-  async saveLoops(input: Array<{
+  async saveLoops(input: {
     sessionId: string | null;
     insightId: string | null;
     category: OpenLoop['category'];
     question: string;
     priority: OpenLoop['priority'];
-  }>): Promise<number> {
+  }[]): Promise<number> {
     if (!input.length) return 0;
     const db = await openAppDatabase();
     let saved = 0;

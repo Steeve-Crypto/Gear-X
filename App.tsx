@@ -1,19 +1,62 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, Pressable } from 'react-native';
-import { useState } from 'react';
+import { StyleSheet, View, Text, Pressable, Alert } from 'react-native';
+import { useState, useEffect } from 'react';
 import { GearClock } from './src/components/GearClock';
+import { startListening, stopListening, requestMicrophonePermission } from './src/services/audio';
+import { routerAgent, listenerAgent } from './src/agents';
 
 export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [insightCount, setInsightCount] = useState(0);
+  const [statusText, setStatusText] = useState('Ready');
+  const [recentTranscript, setRecentTranscript] = useState('');
 
-  const toggleListening = () => {
-    setIsListening((prev) => !prev);
-    // Later: start/stop real audio stream + agents
+  // Ask for mic permission on first launch
+  useEffect(() => {
+    requestMicrophonePermission().then((granted) => {
+      if (!granted) {
+        setStatusText('Microphone permission needed');
+      }
+    });
+  }, []);
+
+  const toggleListening = async () => {
+    if (isListening) {
+      // Stop
+      const uri = await stopListening();
+      setIsListening(false);
+      setStatusText(uri ? 'Recording saved · processing...' : 'Stopped');
+
+      // Run Listener + Router once more with final state
+      const ctx = {
+        recentTranscript,
+        currentInsights: [],
+        isListening: false,
+      };
+      await listenerAgent.run(ctx);
+      await routerAgent.run(ctx);
+    } else {
+      // Start
+      const started = await startListening();
+      if (started) {
+        setIsListening(true);
+        setStatusText('Listening...');
+
+        // Simulate incoming transcript for demo (replace with real STT later)
+        // In production the Listener agent will receive real chunks
+        setTimeout(() => {
+          setRecentTranscript('This is a simulated live transcript while the gears turn...');
+          setInsightCount((c) => c + 1);
+        }, 2500);
+      } else {
+        Alert.alert(
+          'Microphone Access',
+          'Gear X needs microphone permission to listen and build your living knowledge clock.'
+        );
+        setStatusText('Permission denied');
+      }
+    }
   };
-
-  // Temporary demo: add a fake insight every few seconds when listening
-  // (will be replaced by real Extractor + Visualizer agents)
 
   return (
     <View style={styles.container}>
@@ -39,9 +82,17 @@ export default function App() {
         </Text>
       </Pressable>
 
+      <Text style={styles.status}>{statusText}</Text>
+
       <Text style={styles.metrics}>
-        Insights: {insightCount}  •  Gears evolving
+        Insights: {insightCount}  •  Agents ready
       </Text>
+
+      {recentTranscript ? (
+        <Text style={styles.transcript} numberOfLines={2}>
+          {recentTranscript}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -70,7 +121,7 @@ const styles = StyleSheet.create({
   clockContainer: {
     width: 320,
     height: 320,
-    marginBottom: 48,
+    marginBottom: 40,
   },
   button: {
     backgroundColor: '#1a1a1a',
@@ -90,10 +141,23 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 13,
   },
+  status: {
+    marginTop: 16,
+    color: '#c08040',
+    fontSize: 13,
+    letterSpacing: 1,
+  },
   metrics: {
-    marginTop: 24,
+    marginTop: 12,
     color: '#5a5040',
     fontSize: 12,
     letterSpacing: 1,
+  },
+  transcript: {
+    marginTop: 20,
+    color: '#6a6050',
+    fontSize: 12,
+    textAlign: 'center',
+    maxWidth: 280,
   },
 });

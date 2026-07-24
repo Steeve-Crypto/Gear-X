@@ -2,81 +2,75 @@
 
 **A living mechanical clock-planet that listens, thinks, and evolves.**
 
-All 8 planetary agents are online.
-
-Speak → extract → weave → archive → summarize → surface questions → ask the vault.
+Multi-agent mobile application: real-time listening, insight extraction, persistent knowledge vault, and interactive visualization.
 
 ---
 
-## Solar System Model
+## Architecture
 
-**The Sun**  
-- **Router** — central orchestrator. Inspects context and decides which planets wake. Does not extract, store, or speak itself.
+**Router (orchestrator)**  
+Inspects context and activates the appropriate agents. Does not extract, store, or synthesize content itself.
 
-**The 8 Planetary Agents (complete)**
+**Agents**
 
-| # | Agent | Role | Status |
-|---|-------|------|--------|
-| 1 | **Listener** | Real-time STT + speaker awareness | ✅ |
-| 2 | **Extractor** | Structured insights (local LLM + rules) | ✅ |
-| 3 | **Weaver** | Narrative threads from insights | ✅ |
-| 4 | **Summarizer** | Durable high-signal notes | ✅ |
-| 5 | **Questioner** | Open loops & clarifying questions | ✅ |
-| 6 | **Visualizer** | Clock-planet animations | ✅ |
-| 7 | **Retriever** | Natural-language Q&A against the vault | ✅ |
-| 8 | **Archivist** | SQLite persistence & restore | ✅ |
-
----
-
-## Hybrid latency (free local vs paid Grok Voice)
-
-| Path | Free (local) | Paid hybrid |
-|------|--------------|-------------|
-| Speech → first transcript | 300–1200 ms | **150–500 ms** |
-| Speech → first insight + gear update | 800–3500 ms | 600–2000 ms |
-| Short question → spoken answer | device TTS / n/a | **700–1800 ms** |
-
-Full tables: **[docs/LATENCY.md](docs/LATENCY.md)**  
-Local brain timer: `src/services/benchmark.ts`  
-Paid hybrid client + live budget tracker: **[docs/PAID_VOICE.md](docs/PAID_VOICE.md)** · `src/paid/`
+| # | Agent | Role |
+|---|-------|------|
+| 1 | **Listener** | Real-time audio capture and speech input |
+| 2 | **Extractor** | Structured insight extraction (local LLM + rules) |
+| 3 | **Weaver** | Narrative threads across insights |
+| 4 | **Summarizer** | Durable high-signal notes |
+| 5 | **Questioner** | Open loops and clarifying questions |
+| 6 | **Visualizer** | Clock-planet UI updates |
+| 7 | **Retriever** | Natural-language queries against the vault |
+| 8 | **Archivist** | SQLite persistence and restore |
 
 ---
 
-## Paid tier (stub ready)
+## Stack
 
-Grok Voice = ears + mouth. Local agents = brain + vault.
+| Layer | Choice | Rationale |
+|-------|--------|-----------|
+| Client | Expo / React Native | Cross-platform mobile (iOS + Android) from one codebase |
+| Language | TypeScript | Shared types across agents, UI, and services; safer refactors |
+| Local inference | Ollama | Offline-capable agent reasoning |
+| Persistence | expo-sqlite | On-device knowledge vault |
+| Paid voice (optional) | Grok Voice API | Speech-to-speech upgrade path |
 
+This is a mobile app. TypeScript here is the application language for the Expo client and agent runtime, not a substitute for a native-only project.
+
+---
+
+## Hybrid latency
+
+| Path | Local | Paid hybrid (Grok Voice) |
+|------|-------|---------------------------|
+| Speech → first transcript | 300–1200 ms | 150–500 ms |
+| Speech → insight + UI update | 800–3500 ms | 600–2000 ms |
+| Short question → spoken answer | device TTS / n/a | 700–1800 ms |
+
+Details: [docs/LATENCY.md](docs/LATENCY.md) · Paid voice: [docs/PAID_VOICE.md](docs/PAID_VOICE.md)
+
+---
+
+## Setup
+
+```bash
+npm install
+npx expo start
 ```
-src/paid/
-  grokVoiceClient.ts   # WebSocket session, audio, tool bridge
-  tools.ts             # save / search / summarize / question → local agents
-  latencyTracker.ts    # pass / stretch / miss vs latency budgets
-```
 
-Requires backend ephemeral tokens — never put `XAI_API_KEY` in the app.
-
----
-
-## UI Controls
-
-- **START / STOP LISTENING** — mic + full pipeline
-- **SUMMARIZE** — force Summarizer
-- **QUESTION** — force Questioner
-- **ASK** — Retriever query against the vault
-
----
-
-## Local LLM
+Local LLM (optional but recommended):
 
 ```bash
 ollama serve
 ollama pull qwen2.5:3b
 ```
 
-Default: `http://localhost:11434`  
-(Change to your laptop IP when testing on a physical phone.)
+Default Ollama endpoint: `http://localhost:11434`  
+On a physical device, point the client at your machine's LAN IP.
 
 ---
 
-**Built by a student who ships.**  
+## Repository
+
 https://github.com/Steeve-Crypto/Gear-X

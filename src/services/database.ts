@@ -1,5 +1,5 @@
 /**
- * Gear X — SQLite Database Service (Archivist backend)
+ * Gear X — SQLite Database Service (Archivist + Retriever backend)
  * Uses expo-sqlite for local, offline-first persistence.
  */
 
@@ -86,7 +86,7 @@ export async function saveInsights(insights: Insight[]): Promise<number> {
 
 export async function loadAllInsights(): Promise<Insight[]> {
   const database = await getDb();
-  const rows = await database.getAllAsync<{ 
+  const rows = await database.getAllAsync<{
     id: string;
     type: string;
     content: string;
@@ -95,6 +95,36 @@ export async function loadAllInsights(): Promise<Insight[]> {
     linked_insight_ids: string;
     created_at: number;
   }>('SELECT * FROM insights ORDER BY created_at ASC');
+
+  return rows.map((r) => ({
+    id: r.id,
+    type: r.type as Insight['type'],
+    content: r.content,
+    sourceTimestamp: r.source_timestamp,
+    confidence: r.confidence,
+    linkedInsightIds: JSON.parse(r.linked_insight_ids || '[]'),
+    createdAt: r.created_at,
+  }));
+}
+
+export async function searchInsights(query: string, limit = 12): Promise<Insight[]> {
+  const database = await getDb();
+  const q = `%${query.trim()}%`;
+  const rows = await database.getAllAsync<{
+    id: string;
+    type: string;
+    content: string;
+    source_timestamp: number;
+    confidence: number;
+    linked_insight_ids: string;
+    created_at: number;
+  }>(
+    `SELECT * FROM insights
+     WHERE content LIKE ? OR type LIKE ?
+     ORDER BY confidence DESC, created_at DESC
+     LIMIT ?`,
+    [q, q, limit]
+  );
 
   return rows.map((r) => ({
     id: r.id,

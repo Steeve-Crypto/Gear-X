@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, Text, Pressable, Alert } from 'react-native';
+import { StyleSheet, View, Text, Pressable, Alert, TextInput } from 'react-native';
 import { useState, useEffect, useRef } from 'react';
 import { GearClock } from './src/components/GearClock';
 import { startListening, stopListening, requestMicrophonePermission } from './src/services/audio';
@@ -9,6 +9,8 @@ import {
   extractorAgent,
   visualizerAgent,
   archivistAgent,
+  retrieverAgent,
+  weaverAgent,
   restoreKnowledge,
   Insight,
 } from './src/agents';
@@ -19,16 +21,15 @@ export default function App() {
   const [statusText, setStatusText] = useState('Initializing vault...');
   const [recentTranscript, setRecentTranscript] = useState('');
   const [lastInsight, setLastInsight] = useState<string>('');
+  const [query, setQuery] = useState('');
+  const [answer, setAnswer] = useState<string>('');
   const insightsRef = useRef<Insight[]>([]);
 
-  // Init SQLite + restore previous knowledge on launch
   useEffect(() => {
     (async () => {
       try {
         const granted = await requestMicrophonePermission();
-        if (!granted) {
-          setStatusText('Microphone permission needed');
-        }
+        if (!granted) setStatusText('Microphone permission needed');
 
         const stored = await restoreKnowledge();
         insightsRef.current = stored;
@@ -47,7 +48,6 @@ export default function App() {
     })();
   }, []);
 
-  /** Full agent pipeline: Listener → Router → Extractor → Archivist → Visualizer */
   const runPipeline = async (transcript: string, listening: boolean) => {
     const ctx = {
       recentTranscript: transcript,
@@ -55,14 +55,10 @@ export default function App() {
       isListening: listening,
     };
 
-    // 1. Listener
     await listenerAgent.run(ctx);
-
-    // 2. Router decides who wakes
     const routerResult = await routerAgent.run(ctx);
     const active = routerResult.data?.activeAgents || [];
 
-    // 3. Extractor
     if (active.includes('extractor') || transcript.length > 15) {
       const extractResult = await extractorAgent.run(ctx);
 
@@ -73,15 +69,20 @@ export default function App() {
 
         if (newInsights.length > 0) {
           setLastInsight(newInsights[0].content);
-          setStatusText(`+${newInsights.length} insight${newInsights.length > 1 ? 's' : ''} extracted`);
+          setStatusText(`+${newInsights.length} insight(s) extracted`);
         }
 
-        // 4. Archivist — persist immediately
-        const archiveCtx = {
+        // Weaver — form threads from the growing knowledge
+        await weaverAgent.run({
           ...ctx,
-          currentInsights: newInsights, // only the fresh ones for efficiency
-        };
-        const archiveResult = await archivistAgent.run(archiveCtx);
+          currentInsights: insightsRef.current,
+        });
+
+        // Archivist — persist
+        const archiveResult = await archivistAgent.run({
+          ...ctx,
+          currentInsights: newInsights,
+        });
         if (archiveResult.success) {
           setStatusText(
             `+${newInsights.length} saved · vault: ${archiveResult.data?.totalStored ?? insightCount}`
@@ -90,12 +91,33 @@ export default function App() {
       }
     }
 
-    // 5. Visualizer always runs so the clock-planet stays in sync
-    const vizCtx = {
+    await visualizerAgent.run({
       ...ctx,
       currentInsights: insightsRef.current,
-    };
-    await visualizerAgent.run(vizCtx);
+    });
+  };
+
+  const askVault = async () => {
+    if (!query.trim()) return;
+    setStatusText('Retriever searching vault...');
+    setAnswer('');
+
+    const result = await retrieverAgent.run({
+      recentTranscript: '',
+      currentInsights: insightsRef.current,
+      isListening: false,
+      userQuery: query.trim(),
+    });
+
+    if (result.success && result.data?.answer) {
+      setAnswer(result.data.answer);
+      setStatusText(
+        `Retriever · ${result.data.matchCount || 0} match(es) · ${result.data.source}`
+      );
+    } else {
+      setAnswer(result.error || 'No answer returned');
+      setStatusText('Retriever failed');
+    }
   };
 
   const toggleListening = async () => {
@@ -103,7 +125,6 @@ export default function App() {
       const uri = await stopListening();
       setIsListening(false);
       setStatusText(uri ? 'Recording saved · final archive...' : 'Stopped');
-
       await runPipeline(recentTranscript, false);
       setStatusText(`Stopped · ${insightsRef.current.length} insights in vault`);
     } else {
@@ -112,8 +133,8 @@ export default function App() {
         setIsListening(true);
         setStatusText('Listening...');
         setLastInsight('');
+        setAnswer('');
 
-        // Simulated speech waves (replace with real STT later)
         setTimeout(async () => {
           const simulated = 'We need to finish the proposal by Friday and decide on the client meeting.';
           setRecentTranscript(simulated);
@@ -155,13 +176,33 @@ export default function App() {
         </Text>
       </Pressable>
 
+      {/* Retriever query bar */}
+      <View style={styles.queryRow}>
+        <TextInput
+          style={styles.input}
+          placeholder="Ask the vault..."
+          placeholderTextColor="#5a5040"
+          value={query}
+          onChangeText={setQuery}
+          onSubmitEditing={askVault}
+          returnKeyType="search"
+        />
+        <Pressable style={styles.askButton} onPress={askVault}>
+          <Text style={styles.askText}>ASK</Text>
+        </Pressable>
+      </View>
+
       <Text style={styles.status}>{statusText}</Text>
 
       <Text style={styles.metrics}>
-        Insights: {insightCount}  •  SQLite vault active
+        Insights: {insightCount}  •  SQLite vault + Retriever
       </Text>
 
-      {lastInsight ? (
+      {answer ? (
+        <Text style={styles.answer} numberOfLines={6}>
+          {answer}
+        </Text>
+      ) : lastInsight ? (
         <Text style={styles.transcript} numberOfLines={3}>
           {lastInsight}
         </Text>
@@ -192,20 +233,20 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#8a8070',
-    marginBottom: 40,
+    marginBottom: 32,
     letterSpacing: 1,
   },
   clockContainer: {
-    width: 320,
-    height: 320,
-    marginBottom: 40,
+    width: 300,
+    height: 300,
+    marginBottom: 28,
   },
   button: {
     backgroundColor: '#1a1a1a',
     borderWidth: 1,
     borderColor: '#3a3a2a',
-    paddingVertical: 16,
-    paddingHorizontal: 40,
+    paddingVertical: 14,
+    paddingHorizontal: 36,
     borderRadius: 4,
   },
   buttonActive: {
@@ -218,23 +259,63 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 13,
   },
+  queryRow: {
+    flexDirection: 'row',
+    marginTop: 20,
+    width: '100%',
+    maxWidth: 320,
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: '#141410',
+    borderWidth: 1,
+    borderColor: '#2a2a1a',
+    color: '#e8e0d0',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 4,
+    fontSize: 13,
+  },
+  askButton: {
+    backgroundColor: '#2a1a0a',
+    borderWidth: 1,
+    borderColor: '#c08040',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    borderRadius: 4,
+  },
+  askText: {
+    color: '#e8e0d0',
+    fontWeight: '700',
+    letterSpacing: 1,
+    fontSize: 12,
+  },
   status: {
-    marginTop: 16,
+    marginTop: 14,
     color: '#c08040',
     fontSize: 13,
     letterSpacing: 1,
   },
   metrics: {
-    marginTop: 12,
+    marginTop: 8,
     color: '#5a5040',
     fontSize: 12,
     letterSpacing: 1,
   },
   transcript: {
-    marginTop: 20,
+    marginTop: 16,
     color: '#6a6050',
     fontSize: 12,
     textAlign: 'center',
     maxWidth: 300,
+  },
+  answer: {
+    marginTop: 16,
+    color: '#c8b890',
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 310,
+    lineHeight: 18,
   },
 });

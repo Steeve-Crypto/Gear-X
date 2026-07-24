@@ -2,13 +2,11 @@
 
 **A living mechanical clock-planet that listens, thinks, and evolves.**
 
-Open the app → the central core and orbiting gears begin to turn.  
-Speak → local agents extract insight.  
-Every insight is persisted in SQLite and physically grows the solar system.
+Speak → agents extract insight → SQLite remembers forever → you can ask the vault anything.
 
 ---
 
-## Architecture: Solar System Model
+## Solar System Model
 
 **The Sun**  
 - **Router** — central orchestrator
@@ -18,35 +16,29 @@ Every insight is persisted in SQLite and physically grows the solar system.
 | # | Agent | Role |
 |---|-------|------|
 | 1 | **Listener** | Real-time STT + speaker awareness |
-| 2 | **Extractor** | Structured insights (local LLM + rules fallback) |
-| 3 | **Connector** | Knowledge graph linking |
+| 2 | **Extractor** | Structured insights (local LLM + rules) |
+| 3 | **Weaver** | Weaves insights into narrative threads *(replaced old Connector)* |
 | 4 | **Summarizer** | Durable conversation notes |
 | 5 | **Questioner** | Open loops & clarifying questions |
-| 6 | **Visualizer** | Clock-planet animations (orbits, teeth, rings) |
-| 7 | **Retriever** | Natural-language Q&A over the vault |
-| 8 | **Archivist** | **SQLite persistence** — long-term storage & restore |
+| 6 | **Visualizer** | Clock-planet animations |
+| 7 | **Retriever** | Natural-language Q&A against the vault |
+| 8 | **Archivist** | SQLite persistence & restore |
 
 ---
 
-## SQLite Archivist (now live)
+## Retriever (now live)
 
-- Database: `gearx.db` (expo-sqlite)
-- Tables: `insights` + `knowledge_events`
-- On launch: automatically restores every previously saved insight
-- After every extraction: Archivist upserts new insights into the vault
-- Survives app restarts — the clock-planet remembers
+- Search bar in the UI: type a question → hit **ASK**
+- Pulls matching insights from SQLite
+- Optionally synthesizes a clean answer with local Ollama
+- Falls back to a readable list of matches if the LLM is offline
 
 ---
 
-## Local LLM
+## Weaver (new planet)
 
-Extractor prefers Ollama:
-```bash
-ollama serve
-ollama pull qwen2.5:3b
-```
-Default: `http://localhost:11434`  
-(Change to your laptop IP when testing on a physical phone.)
+Replaces the old Connector.  
+Instead of just linking IDs, it groups insights into thematic and chronological **threads** the system can reason over later.
 
 ---
 
@@ -56,12 +48,12 @@ Default: `http://localhost:11434`
 ✅ Microphone + Listener  
 ✅ Extractor (LLM + rules)  
 ✅ Visualizer  
-✅ **Archivist + SQLite** (persist + restore on launch)  
-✅ Live pipeline: speech → extract → archive → gears grow  
+✅ Archivist + SQLite  
+✅ **Retriever** (ask the vault)  
+✅ **Weaver** (narrative threads)  
 
-**Next:** Connector, Retriever, Summarizer, Questioner.
+**Still stubs:** Summarizer, Questioner
 
 ---
 
-**Built by a student who ships.**  
 https://github.com/Steeve-Crypto/Gear-X

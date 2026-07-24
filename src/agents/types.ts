@@ -1,6 +1,5 @@
 /**
  * Gear X Multi-Agent System Types
- * Application-level agents (not MoE layers).
  *
  * Solar system model:
  *   Router = the Sun (central orchestrator)
@@ -11,12 +10,12 @@ export type AgentId =
   | 'router'      // the Sun
   | 'listener'
   | 'extractor'
-  | 'connector'
+  | 'weaver'      // replaced old Connector
   | 'summarizer'
   | 'questioner'
   | 'visualizer'
   | 'retriever'
-  | 'archivist';  // 8th planet
+  | 'archivist';
 
 export interface Insight {
   id: string;
@@ -60,7 +59,6 @@ export interface Agent {
   id: AgentId;
   name: string;
   description: string;
-  /** Whether this agent should run on every audio chunk or only on demand */
   continuous: boolean;
   run: (ctx: AgentContext) => Promise<AgentResult>;
 }

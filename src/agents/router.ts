@@ -13,31 +13,28 @@ export const routerAgent: Agent = {
   async run(ctx: AgentContext): Promise<AgentResult> {
     const activeAgents: AgentId[] = [];
 
-    // Always keep Listener active while recording
     if (ctx.isListening) {
       activeAgents.push('listener');
     }
 
-    // New speech → Extractor + Connector + Visualizer + Archivist
+    // New speech → Extractor + Weaver + Visualizer + Archivist
     if (ctx.recentTranscript && ctx.recentTranscript.length > 20) {
       activeAgents.push('extractor');
-      activeAgents.push('connector');
+      activeAgents.push('weaver');
       activeAgents.push('visualizer');
       activeAgents.push('archivist');
     }
 
-    // If user asked a question, wake Retriever
+    // Explicit question → Retriever
     if (ctx.userQuery) {
       activeAgents.push('retriever');
     }
 
-    // Periodically wake Summarizer and Questioner
     if (ctx.currentInsights.length > 0 && ctx.currentInsights.length % 5 === 0) {
       activeAgents.push('summarizer');
       activeAgents.push('questioner');
     }
 
-    // Always archive when we have any insights
     if (ctx.currentInsights.length > 0) {
       activeAgents.push('archivist');
     }

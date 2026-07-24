@@ -8,27 +8,46 @@ import {
   listenerAgent,
   extractorAgent,
   visualizerAgent,
+  archivistAgent,
+  restoreKnowledge,
   Insight,
 } from './src/agents';
 
 export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [insightCount, setInsightCount] = useState(0);
-  const [statusText, setStatusText] = useState('Ready');
+  const [statusText, setStatusText] = useState('Initializing vault...');
   const [recentTranscript, setRecentTranscript] = useState('');
   const [lastInsight, setLastInsight] = useState<string>('');
   const insightsRef = useRef<Insight[]>([]);
 
-  // Ask for mic permission on first launch
+  // Init SQLite + restore previous knowledge on launch
   useEffect(() => {
-    requestMicrophonePermission().then((granted) => {
-      if (!granted) {
-        setStatusText('Microphone permission needed');
+    (async () => {
+      try {
+        const granted = await requestMicrophonePermission();
+        if (!granted) {
+          setStatusText('Microphone permission needed');
+        }
+
+        const stored = await restoreKnowledge();
+        insightsRef.current = stored;
+        setInsightCount(stored.length);
+
+        if (stored.length > 0) {
+          setStatusText(`Vault restored · ${stored.length} insights`);
+          setLastInsight(stored[stored.length - 1].content);
+        } else {
+          setStatusText('Ready · empty vault');
+        }
+      } catch (e) {
+        console.warn('Init error', e);
+        setStatusText('Ready');
       }
-    });
+    })();
   }, []);
 
-  /** Full agent pipeline: Listener → Router → Extractor → Visualizer */
+  /** Full agent pipeline: Listener → Router → Extractor → Archivist → Visualizer */
   const runPipeline = async (transcript: string, listening: boolean) => {
     const ctx = {
       recentTranscript: transcript,
@@ -43,7 +62,7 @@ export default function App() {
     const routerResult = await routerAgent.run(ctx);
     const active = routerResult.data?.activeAgents || [];
 
-    // 3. Extractor (if Router woke it or we have new speech)
+    // 3. Extractor
     if (active.includes('extractor') || transcript.length > 15) {
       const extractResult = await extractorAgent.run(ctx);
 
@@ -56,10 +75,22 @@ export default function App() {
           setLastInsight(newInsights[0].content);
           setStatusText(`+${newInsights.length} insight${newInsights.length > 1 ? 's' : ''} extracted`);
         }
+
+        // 4. Archivist — persist immediately
+        const archiveCtx = {
+          ...ctx,
+          currentInsights: newInsights, // only the fresh ones for efficiency
+        };
+        const archiveResult = await archivistAgent.run(archiveCtx);
+        if (archiveResult.success) {
+          setStatusText(
+            `+${newInsights.length} saved · vault: ${archiveResult.data?.totalStored ?? insightCount}`
+          );
+        }
       }
     }
 
-    // 4. Visualizer always runs so gears stay in sync
+    // 5. Visualizer always runs so the clock-planet stays in sync
     const vizCtx = {
       ...ctx,
       currentInsights: insightsRef.current,
@@ -69,30 +100,26 @@ export default function App() {
 
   const toggleListening = async () => {
     if (isListening) {
-      // Stop
       const uri = await stopListening();
       setIsListening(false);
-      setStatusText(uri ? 'Recording saved · processing final insights...' : 'Stopped');
+      setStatusText(uri ? 'Recording saved · final archive...' : 'Stopped');
 
       await runPipeline(recentTranscript, false);
-      setStatusText(`Stopped · ${insightsRef.current.length} total insights`);
+      setStatusText(`Stopped · ${insightsRef.current.length} insights in vault`);
     } else {
-      // Start
       const started = await startListening();
       if (started) {
         setIsListening(true);
         setStatusText('Listening...');
         setLastInsight('');
 
-        // Simulate live speech arriving (replace with real streaming STT later)
-        // This triggers the full Extractor → Visualizer pipeline
+        // Simulated speech waves (replace with real STT later)
         setTimeout(async () => {
           const simulated = 'We need to finish the proposal by Friday and decide on the client meeting.';
           setRecentTranscript(simulated);
           await runPipeline(simulated, true);
         }, 2200);
 
-        // Second wave of speech a few seconds later
         setTimeout(async () => {
           const simulated2 = 'I am not sure about the budget yet. Maybe we should ask the team tomorrow?';
           setRecentTranscript(simulated2);
@@ -116,10 +143,7 @@ export default function App() {
       <Text style={styles.subtitle}>The machine that remembers</Text>
 
       <View style={styles.clockContainer}>
-        <GearClock
-          isListening={isListening}
-          insightCount={insightCount}
-        />
+        <GearClock isListening={isListening} insightCount={insightCount} />
       </View>
 
       <Pressable
@@ -134,7 +158,7 @@ export default function App() {
       <Text style={styles.status}>{statusText}</Text>
 
       <Text style={styles.metrics}>
-        Insights: {insightCount}  •  Sun + 8 planets active
+        Insights: {insightCount}  •  SQLite vault active
       </Text>
 
       {lastInsight ? (

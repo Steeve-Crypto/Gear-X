@@ -27,6 +27,7 @@ const REALTIME_URL = 'wss://api.x.ai/v1/realtime?model=grok-voice-latest';
 export interface GrokVoiceConfig {
   /** Ephemeral token from your backend — NOT the long-lived API key */
   ephemeralToken: string;
+  remoteConsent: boolean;
   voice?: string; // e.g. 'eve', 'ara', 'leo'
   instructions?: string;
   onPartialTranscript?: (text: string) => void;
@@ -65,6 +66,10 @@ export class GrokVoiceClient {
    */
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      if (!this.config.remoteConsent) {
+        reject(new Error('Remote processing consent is required for Grok Voice.'));
+        return;
+      }
       this.tracker = new LatencyTracker();
 
       // Note: standard RN WebSocket may not support custom headers.
@@ -81,11 +86,9 @@ export class GrokVoiceClient {
             Authorization: `Bearer ${this.config.ephemeralToken}`,
           },
         });
-      } catch (e: any) {
-        // Fallback: token as query (only if your backend issues URL-safe ephemeral tokens)
-        this.ws = new WebSocket(
-          `${REALTIME_URL}&token=${encodeURIComponent(this.config.ephemeralToken)}`
-        );
+      } catch {
+        reject(new Error('This runtime requires a secure backend WebSocket proxy.'));
+        return;
       }
 
       const ws = this.ws;

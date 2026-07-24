@@ -7,6 +7,7 @@ import { GearXError } from '../domain/errors';
 import { TranscriptionProvider } from '../infrastructure/transcription/types';
 import { sessionRepository } from '../repositories/sessionRepository';
 import { createId } from '../utils/id';
+import { runRepository } from '../repositories/runRepository';
 import { startListening, stopListening } from './audio';
 
 const runtime = new AgentRuntime(agentRegistry);
@@ -64,11 +65,27 @@ export async function stopAndProcessSession(input: {
     if (!(await input.provider.isAvailable())) {
       throw new GearXError('PROVIDER_UNAVAILABLE', 'The transcription provider is unavailable.');
     }
-    const transcription = await input.provider.transcribe({
+    const providerRunId = createId('provider');
+    const providerStartedAt = Date.now();
+    await runRepository.startProvider({
+      id: providerRunId,
       sessionId: session.id,
-      audioUri: uri,
-      signal: input.signal,
+      providerId: input.provider.id,
+      operation: 'transcription',
+      remote: input.provider.remote,
     });
+    let transcription;
+    try {
+      transcription = await input.provider.transcribe({
+        sessionId: session.id,
+        audioUri: uri,
+        signal: input.signal,
+      });
+      await runRepository.finishProvider(providerRunId, providerStartedAt);
+    } catch (error) {
+      await runRepository.finishProvider(providerRunId, providerStartedAt, 'TRANSCRIPTION_FAILED');
+      throw error;
+    }
     for (const source of transcription.segments) {
       await sessionRepository.addSegment({
         id: createId('segment'),
@@ -92,9 +109,13 @@ export async function stopAndProcessSession(input: {
     const routed = await routerAgent.run(context);
     const active = routed.data?.activeAgents ?? [];
     input.onAgents?.(active);
+    const runGroup = `${session.id}:final`;
     const results = await runtime.execute(active, context, {
       signal: input.signal,
-      idempotencyKey: `${session.id}:final`,
+      idempotencyKey: runGroup,
+      onEvent: (event) => {
+        void runRepository.recordAgentEvent(session.id, runGroup, event);
+      },
     });
     const newInsights = results
       .filter((result) => result.agentId === 'extractor')

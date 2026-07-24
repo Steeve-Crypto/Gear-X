@@ -1,76 +1,93 @@
 # Gear X
 
-**A living mechanical clock-planet that listens, thinks, and evolves.**
+Gear X is a voice-first, local-first personal intelligence mobile application represented as a living mechanical clock-planet. It records bounded sessions, transforms provider-produced transcripts into structured knowledge, connects related ideas, stores long-term memory, surfaces unresolved questions, and answers against evidence in the private vault.
 
-Multi-agent mobile application: real-time listening, insight extraction, persistent knowledge vault, and interactive visualization.
+> Gear X is the machine that remembers, connects, questions, and evolves with its user.
 
----
+## Current beta status
+
+The repository has been migrated from a single-screen prototype to Expo Router with layered domain, provider, repository, agent-runtime, feature, and design boundaries. Audio capture is real. Simulated transcripts have been removed from production. The default transcription adapter intentionally reports unavailable until a compatible native on-device module or secure backend provider is configured—recording is not presented as transcription.
+
+The SQLite database is application-sandboxed but is not application-level encrypted. Remote processing is disabled by default and requires explicit consent. Never place long-lived provider credentials in the mobile app.
 
 ## Architecture
 
-**Router (orchestrator)**  
-Inspects context and activates the appropriate agents. Does not extract, store, or synthesize content itself.
+```text
+app/                       Expo Router route composition
+src/components/            reusable mobile presentation and clock
+src/design/                obsidian/brass design tokens
+src/domain/                models, errors, routing, validation, ranking
+src/features/              feature controllers as the app grows
+src/agents/                Router plus eight specialized agents/runtime
+src/infrastructure/        SQLite migrations and provider adapters
+src/repositories/          durable data access and observability
+src/services/              capture and knowledge workflows
+src/state/                 ephemeral settings/session state
+specs/                     product and feature source of truth
+tasks/                     execution status and verification
+tests/                     deterministic production-domain tests
+```
 
-**Agents**
+Router is the orchestrator, not a knowledge-processing god object. The eight agents remain Listener, Extractor, Weaver, Summarizer, Questioner, Visualizer, Retriever, and Archivist.
 
-| # | Agent | Role |
-|---|-------|------|
-| 1 | **Listener** | Real-time audio capture and speech input |
-| 2 | **Extractor** | Structured insight extraction (local LLM + rules) |
-| 3 | **Weaver** | Narrative threads across insights |
-| 4 | **Summarizer** | Durable high-signal notes |
-| 5 | **Questioner** | Open loops and clarifying questions |
-| 6 | **Visualizer** | Clock-planet UI updates |
-| 7 | **Retriever** | Natural-language queries against the vault |
-| 8 | **Archivist** | SQLite persistence and restore |
+## Requirements
 
----
-
-## Stack
-
-| Layer | Choice | Rationale |
-|-------|--------|-----------|
-| Client | Expo / React Native | Cross-platform mobile (iOS + Android) from one codebase |
-| Language | TypeScript | Shared types across agents, UI, and services; safer refactors |
-| Local inference | Ollama | Offline-capable agent reasoning |
-| Persistence | expo-sqlite | On-device knowledge vault |
-| Paid voice (optional) | Grok Voice API | Speech-to-speech upgrade path |
-
-This is a mobile app. TypeScript here is the application language for the Expo client and agent runtime, not a substitute for a native-only project.
-
----
-
-## Hybrid latency
-
-| Path | Local | Paid hybrid (Grok Voice) |
-|------|-------|---------------------------|
-| Speech → first transcript | 300–1200 ms | 150–500 ms |
-| Speech → insight + UI update | 800–3500 ms | 600–2000 ms |
-| Short question → spoken answer | device TTS / n/a | 700–1800 ms |
-
-Details: [docs/LATENCY.md](docs/LATENCY.md) · Paid voice: [docs/PAID_VOICE.md](docs/PAID_VOICE.md)
-
----
+- Node.js 20 or 22 LTS (Node 24 is not the Expo 53 release baseline)
+- npm
+- Expo Go for capture/navigation checks, or an Expo development build for future native transcription
+- Ollama for optional local inference
 
 ## Setup
 
 ```bash
 npm install
-npx expo start
+npm run typecheck
+npm test
+npm start
 ```
 
-Local LLM (optional but recommended):
+For Ollama:
 
 ```bash
 ollama serve
 ollama pull qwen2.5:3b
 ```
 
-Default Ollama endpoint: `http://localhost:11434`  
-On a physical device, point the client at your machine's LAN IP.
+The default endpoint is `http://localhost:11434`. A physical device must use the development machine’s LAN address. Configure it in Settings → Inference.
 
----
+## Commands
 
-## Repository
+```bash
+npm start
+npm run android
+npm run ios
+npm run web
+npm run typecheck
+npm test
+npm run lint
+npm run validate
+```
 
-https://github.com/Steeve-Crypto/Gear-X
+`validate` runs type checking, tests, and lint. Native microphone, persistence-after-restart, background interruption, and iOS/Android behavior still require the manual matrix in [release readiness](specs/release-readiness.md).
+
+## Privacy
+
+- Local processing is the default.
+- Remote adapters are consent-gated.
+- Audio URI retention is opt-in.
+- Transcript content is not intentionally written to production logs.
+- Grok Voice accepts only a backend-issued ephemeral credential and refuses to connect without remote consent.
+- JSON export is user-triggered and plaintext; the user must protect it after it leaves the app.
+
+See [privacy details](docs/PRIVACY.md) and [provider boundaries](specs/inference-providers.md).
+
+## Known limitations
+
+- A production offline STT engine is not bundled in managed Expo. The adapter boundary is ready for a native Whisper/Moonshine-compatible module.
+- Secure share-to-file export requires a platform file/share adapter; the current UI prepares selectable versioned JSON.
+- SQLCipher/platform-wrapped database encryption is not yet implemented.
+- Physical-device verification and store release configuration remain.
+
+## Contribution workflow
+
+Read [AGENTS.md](AGENTS.md), the relevant specification, and matching task before editing. Preserve existing systems, update specs with behavior, run focused verification, and commit each small milestone with a message under five words.

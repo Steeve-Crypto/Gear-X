@@ -12,16 +12,23 @@ export async function saveInsight(insight: Insight): Promise<void> {
   const database = await getDb();
   await database.runAsync(
     `INSERT OR REPLACE INTO insights
-     (id, type, content, source_timestamp, confidence, linked_insight_ids, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     (id, session_id, type, content, source_timestamp, confidence, source_segment_ids,
+      linked_insight_ids, pinned, archived, unresolved, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       insight.id,
+      insight.sessionId ?? null,
       insight.type,
       insight.content,
       insight.sourceTimestamp,
       insight.confidence,
+      JSON.stringify(insight.sourceSegmentIds || []),
       JSON.stringify(insight.linkedInsightIds || []),
+      insight.pinned ? 1 : 0,
+      insight.archived ? 1 : 0,
+      insight.unresolved ?? insight.type === 'open_loop' ? 1 : 0,
       insight.createdAt,
+      insight.updatedAt ?? insight.createdAt,
     ]
   );
 }
@@ -33,16 +40,23 @@ export async function saveInsights(insights: Insight[]): Promise<number> {
   for (const insight of insights) {
     await database.runAsync(
       `INSERT OR REPLACE INTO insights
-       (id, type, content, source_timestamp, confidence, linked_insight_ids, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       (id, session_id, type, content, source_timestamp, confidence, source_segment_ids,
+        linked_insight_ids, pinned, archived, unresolved, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         insight.id,
+        insight.sessionId ?? null,
         insight.type,
         insight.content,
         insight.sourceTimestamp,
         insight.confidence,
+        JSON.stringify(insight.sourceSegmentIds || []),
         JSON.stringify(insight.linkedInsightIds || []),
+        insight.pinned ? 1 : 0,
+        insight.archived ? 1 : 0,
+        insight.unresolved ?? insight.type === 'open_loop' ? 1 : 0,
         insight.createdAt,
+        insight.updatedAt ?? insight.createdAt,
       ]
     );
     saved++;
@@ -64,18 +78,22 @@ export async function loadAllInsights(): Promise<Insight[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    sessionId: (r as typeof r & { session_id?: string }).session_id ?? null,
     type: r.type as Insight['type'],
     content: r.content,
     sourceTimestamp: r.source_timestamp,
     confidence: r.confidence,
     linkedInsightIds: JSON.parse(r.linked_insight_ids || '[]'),
     createdAt: r.created_at,
+    updatedAt: (r as typeof r & { updated_at?: number }).updated_at || r.created_at,
   }));
 }
 
 export async function searchInsights(query: string, limit = 12): Promise<Insight[]> {
   const database = await getDb();
-  const q = `%${query.trim()}%`;
+  const tokens = [...new Set(query.toLowerCase().match(/[a-z0-9]{2,}/g) ?? [])].slice(0, 8);
+  if (!tokens.length) return [];
+  const clauses = tokens.map(() => 'LOWER(content) LIKE ?').join(' OR ');
   const rows = await database.getAllAsync<{
     id: string;
     type: string;
@@ -86,10 +104,10 @@ export async function searchInsights(query: string, limit = 12): Promise<Insight
     created_at: number;
   }>(
     `SELECT * FROM insights
-     WHERE content LIKE ? OR type LIKE ?
-     ORDER BY confidence DESC, created_at DESC
+     WHERE archived = 0 AND (${clauses})
+     ORDER BY pinned DESC, confidence DESC, created_at DESC
      LIMIT ?`,
-    [q, q, limit]
+    [...tokens.map((token) => `%${token}%`), limit]
   );
 
   return rows.map((r) => ({
@@ -113,28 +131,38 @@ export async function getInsightCount(): Promise<number> {
 
 export interface SummaryRecord {
   id: string;
+  sessionId?: string | null;
+  threadId?: string | null;
   title: string;
   body: string;
   insightIds: string[];
   insightCount: number;
   source: 'llm' | 'rules';
   createdAt: number;
+  updatedAt?: number;
 }
 
 export async function saveSummary(summary: SummaryRecord): Promise<void> {
   const database = await getDb();
   await database.runAsync(
     `INSERT OR REPLACE INTO summaries
-     (id, title, body, insight_ids, insight_count, source, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     (id, session_id, thread_id, scope, title, body, source_insight_ids, insight_ids,
+      insight_count, provider, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       summary.id,
+      summary.sessionId ?? null,
+      summary.threadId ?? null,
+      summary.threadId ? 'thread' : 'session',
       summary.title,
       summary.body,
       JSON.stringify(summary.insightIds),
+      JSON.stringify(summary.insightIds),
       summary.insightCount,
       summary.source,
+      summary.source,
       summary.createdAt,
+      summary.updatedAt ?? summary.createdAt,
     ]
   );
 }

@@ -1,5 +1,6 @@
 import { KnowledgeThread, OpenLoop, VaultInsight } from '../domain/models';
 import { openAppDatabase } from '../infrastructure/database';
+import { createId } from '../utils/id';
 
 const parseIds = (value: unknown): string[] => {
   try {
@@ -123,6 +124,116 @@ export const knowledgeRepository = {
     }));
   },
 
+  async saveThread(input: {
+    id?: string;
+    title: string;
+    description: string;
+    confidence: number;
+    links: Array<{
+      insightId: string;
+      relationship: string;
+      rationale: string;
+      confidence: number;
+    }>;
+  }): Promise<string> {
+    const db = await openAppDatabase();
+    const id = input.id ?? createId('thread');
+    const now = Date.now();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `INSERT INTO threads (id, title, description, confidence, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET title = excluded.title, description = excluded.description,
+           confidence = excluded.confidence, updated_at = excluded.updated_at`,
+        [id, input.title, input.description, input.confidence, now, now],
+      );
+      for (const link of input.links) {
+        await db.runAsync(
+          `INSERT INTO thread_insights
+           (thread_id, insight_id, relationship, rationale, confidence)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(thread_id, insight_id) DO UPDATE SET
+             relationship = excluded.relationship, rationale = excluded.rationale,
+             confidence = excluded.confidence`,
+          [id, link.insightId, link.relationship, link.rationale, link.confidence],
+        );
+      }
+    });
+    return id;
+  },
+
+  async thread(id: string): Promise<{
+    thread: KnowledgeThread;
+    links: Array<VaultInsight & { relationship: string; rationale: string; linkConfidence: number }>;
+  } | null> {
+    const db = await openAppDatabase();
+    const row = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM threads WHERE id = ?',
+      [id],
+    );
+    if (!row) return null;
+    const links = await db.getAllAsync<Record<string, unknown>>(
+      `SELECT i.*, ti.relationship, ti.rationale, ti.confidence AS link_confidence
+       FROM thread_insights ti JOIN insights i ON i.id = ti.insight_id
+       WHERE ti.thread_id = ? ORDER BY i.created_at ASC`,
+      [id],
+    );
+    return {
+      thread: {
+        id: String(row.id),
+        title: String(row.title),
+        description: String(row.description),
+        confidence: Number(row.confidence),
+        createdAt: Number(row.created_at),
+        updatedAt: Number(row.updated_at),
+      },
+      links: links.map((link) => ({
+        ...toInsight(link),
+        relationship: String(link.relationship),
+        rationale: String(link.rationale),
+        linkConfidence: Number(link.link_confidence),
+      })),
+    };
+  },
+
+  async saveLoops(input: Array<{
+    sessionId: string | null;
+    insightId: string | null;
+    category: OpenLoop['category'];
+    question: string;
+    priority: OpenLoop['priority'];
+  }>): Promise<number> {
+    if (!input.length) return 0;
+    const db = await openAppDatabase();
+    let saved = 0;
+    await db.withTransactionAsync(async () => {
+      for (const loop of input) {
+        const existing = await db.getFirstAsync<{ id: string }>(
+          `SELECT id FROM questions WHERE question = ?
+           AND ((session_id = ?) OR (session_id IS NULL AND ? IS NULL)) LIMIT 1`,
+          [loop.question, loop.sessionId, loop.sessionId],
+        );
+        if (existing) continue;
+        await db.runAsync(
+          `INSERT INTO questions
+           (id, session_id, insight_id, category, question, status, priority, created_at)
+           VALUES (?, ?, ?, ?, ?, 'open', ?, ?)`,
+          [
+            createId('loop'),
+            loop.sessionId,
+            loop.insightId,
+            loop.category,
+            loop.question,
+            loop.priority,
+            Date.now(),
+          ],
+        );
+        saved += 1;
+      }
+    });
+    return saved;
+  },
+
   async loops(status: OpenLoop['status'] | 'all' = 'open', limit = 50): Promise<OpenLoop[]> {
     const db = await openAppDatabase();
     const rows = await db.getAllAsync<Record<string, unknown>>(
@@ -144,6 +255,28 @@ export const knowledgeRepository = {
       createdAt: Number(row.created_at),
       resolvedAt: row.resolved_at == null ? null : Number(row.resolved_at),
     }));
+  },
+
+  async loop(id: string): Promise<OpenLoop | null> {
+    const db = await openAppDatabase();
+    const row = await db.getFirstAsync<Record<string, unknown>>(
+      'SELECT * FROM questions WHERE id = ?',
+      [id],
+    );
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      sessionId: row.session_id == null ? null : String(row.session_id),
+      insightId: row.insight_id == null ? null : String(row.insight_id),
+      category: row.category as OpenLoop['category'],
+      question: String(row.question),
+      status: row.status as OpenLoop['status'],
+      priority: row.priority as OpenLoop['priority'],
+      dueAt: row.due_at == null ? null : Number(row.due_at),
+      resolution: row.resolution == null ? null : String(row.resolution),
+      createdAt: Number(row.created_at),
+      resolvedAt: row.resolved_at == null ? null : Number(row.resolved_at),
+    };
   },
 
   async resolveLoop(id: string, resolution: string, status: 'resolved' | 'dismissed'): Promise<void> {

@@ -53,6 +53,7 @@ Rules:
         if (Array.isArray(parsed)) {
           insights = parsed.slice(0, 5).map((item: any, i: number) => ({
             id: `ins_${now}_${i}`,
+            sessionId: ctx.sessionId ?? null,
             type: (['fact', 'decision', 'action', 'entity', 'deadline', 'open_loop'].includes(item.type)
               ? item.type
               : 'fact') as Insight['type'],
@@ -61,6 +62,7 @@ Rules:
             confidence: Math.min(1, Math.max(0.5, Number(item.confidence) || 0.75)),
             linkedInsightIds: [],
             createdAt: now,
+            updatedAt: now,
           }));
           source = 'llm';
         }
@@ -85,12 +87,14 @@ Rules:
         if (p.keywords.some((k) => text.includes(k))) {
           insights.push({
             id: `ins_${now}_${Math.random().toString(36).slice(2, 7)}`,
+            sessionId: ctx.sessionId ?? null,
             type: p.type,
             content: `${p.template}: "${ctx.recentTranscript.slice(0, 90)}${ctx.recentTranscript.length > 90 ? '...' : ''}"`,
             sourceTimestamp: now,
-            confidence: 0.65 + Math.random() * 0.2,
+            confidence: 0.7,
             linkedInsightIds: [],
             createdAt: now,
+            updatedAt: now,
           });
         }
       }
@@ -98,12 +102,14 @@ Rules:
       if (insights.length === 0 && ctx.recentTranscript.length > 15) {
         insights.push({
           id: `ins_${now}_gen`,
+          sessionId: ctx.sessionId ?? null,
           type: 'fact',
           content: `Heard: "${ctx.recentTranscript.slice(0, 100)}"`,
           sourceTimestamp: now,
           confidence: 0.55,
           linkedInsightIds: [],
           createdAt: now,
+          updatedAt: now,
         });
       }
     }

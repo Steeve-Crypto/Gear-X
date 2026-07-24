@@ -91,12 +91,14 @@ No markdown. No extra text.`;
 
     const summary: SummaryRecord = {
       id: `sum_${now}`,
+      sessionId: ctx.sessionId ?? null,
       title,
       body,
       insightIds: insights.map((i) => i.id),
       insightCount: insights.length,
       source,
       createdAt: now,
+      updatedAt: now,
     };
 
     await saveSummary(summary);

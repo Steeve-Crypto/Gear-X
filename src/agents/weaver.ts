@@ -1,51 +1,61 @@
-import { Agent, AgentContext, AgentResult, Insight } from './types';
+import { knowledgeRepository } from '../repositories/knowledgeRepository';
+import { Agent, AgentResult, Insight } from './types';
 
 /**
- * Weaver Agent (replaces the old Connector)
- * Weaves multiple insights into coherent narrative threads / higher-order understanding.
- * This is not just linking IDs — it creates thematic threads the clock can remember.
+ * Weaver creates explicit, inspectable relationships. It never treats
+ * concatenated insight text as a relationship.
  */
 export const weaverAgent: Agent = {
   id: 'weaver',
   name: 'Weaver',
-  description: 'Weaves insights into coherent narrative threads and higher-order patterns.',
+  description: 'Creates durable narrative threads with explicit relationship rationales.',
   continuous: false,
+  idempotent: true,
 
-  async run(ctx: AgentContext): Promise<AgentResult> {
-    const insights = ctx.currentInsights || [];
-
+  async run(ctx): Promise<AgentResult> {
+    const insights = ctx.currentInsights ?? [];
     if (insights.length < 2) {
       return {
         agentId: 'weaver',
         success: true,
-        data: { threads: [], message: 'Need at least 2 insights to weave' },
+        data: { threads: [], message: 'Need at least two insights to weave.' },
       };
     }
 
-    // Group by type to form simple thematic threads
-    const byType: Record<string, Insight[]> = {};
-    for (const ins of insights) {
-      if (!byType[ins.type]) byType[ins.type] = [];
-      byType[ins.type].push(ins);
+    const byType = new Map<Insight['type'], Insight[]>();
+    for (const insight of insights) {
+      byType.set(insight.type, [...(byType.get(insight.type) ?? []), insight]);
     }
 
-    const threads = Object.entries(byType)
-      .filter(([, list]) => list.length >= 1)
-      .map(([type, list]) => ({
-        theme: type,
-        count: list.length,
-        summary: list.map((i) => i.content).join(' → '),
-        insightIds: list.map((i) => i.id),
-      }));
-
-    // Also create a chronological thread of the most recent items
-    const recent = [...insights].slice(-5);
-    if (recent.length >= 2) {
+    const threads: Array<{
+      id: string;
+      theme: string;
+      count: number;
+      rationale: string;
+      insightIds: string[];
+    }> = [];
+    for (const [type, related] of byType) {
+      if (related.length < 2) continue;
+      const rationale =
+        `These records share the "${type}" classification and form one inspectable knowledge pattern.`;
+      const id = await knowledgeRepository.saveThread({
+        id: `thread_type_${type}`,
+        title: `${type.replace('_', ' ')} thread`,
+        description: `A durable relationship between ${related.length} ${type.replace('_', ' ')} insights.`,
+        confidence: 0.72,
+        links: related.map((insight) => ({
+          insightId: insight.id,
+          relationship: 'shared_classification',
+          rationale,
+          confidence: Math.min(insight.confidence, 0.8),
+        })),
+      });
       threads.push({
-        theme: 'timeline',
-        count: recent.length,
-        summary: recent.map((i) => i.content).join(' → '),
-        insightIds: recent.map((i) => i.id),
+        id,
+        theme: type,
+        count: related.length,
+        rationale,
+        insightIds: related.map((insight) => insight.id),
       });
     }
 
@@ -55,11 +65,11 @@ export const weaverAgent: Agent = {
       data: {
         threads,
         threadCount: threads.length,
-        message: `Wove ${threads.length} knowledge thread(s)`,
+        message: `Wove ${threads.length} inspectable thread(s).`,
       },
-      events: threads.map((t) => ({
-        type: 'link_created' as const,
-        payload: t.summary,
+      events: threads.map((thread) => ({
+        type: 'link_created',
+        payload: thread.rationale,
         timestamp: Date.now(),
       })),
     };

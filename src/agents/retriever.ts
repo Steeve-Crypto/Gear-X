@@ -1,5 +1,5 @@
 import { Agent, AgentContext, AgentResult, Insight } from './types';
-import { searchInsights, loadAllInsights } from '../services/database';
+import { searchInsights } from '../services/database';
 import { callLocalLLM } from '../services/llm';
 
 /**
@@ -26,22 +26,18 @@ export const retrieverAgent: Agent = {
 
     try {
       // 1. Pull relevant insights from the vault
-      let matches = await searchInsights(query, 10);
-
-      // If keyword search is weak, fall back to recent insights
-      if (matches.length === 0) {
-        const all = await loadAllInsights();
-        matches = all.slice(-8);
-      }
+      const matches = await searchInsights(query, 10);
 
       if (matches.length === 0) {
         return {
           agentId: 'retriever',
           success: true,
           data: {
-            answer: 'The vault is still empty. Listen to a conversation first.',
+            answer: 'No stored evidence matches that question.',
             matches: [],
-            source: 'empty',
+            matchCount: 0,
+            retrievalQuality: 0,
+            source: 'no_evidence',
           },
         };
       }
@@ -79,6 +75,10 @@ Do not invent facts.`;
           answer,
           matches,
           matchCount: matches.length,
+          retrievalQuality: Math.min(
+            1,
+            matches.reduce((total, match) => total + match.confidence, 0) / matches.length,
+          ),
           source,
           query,
         },

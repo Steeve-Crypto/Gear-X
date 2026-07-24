@@ -22,16 +22,21 @@ export class AgentRuntime {
 
   async execute(ids: AgentId[], context: AgentContext, options: RuntimeOptions = {}) {
     const ordered = this.order([...new Set(ids)]);
+    const pipelineContext: AgentContext = { ...context, currentInsights: [...context.currentInsights] };
     const results: AgentResult[] = [];
     for (const id of ordered) {
       if (id === 'router') continue;
       if (options.signal?.aborted) break;
       const agent = this.agents.get(id);
-      if (!agent || (agent.canRun && !agent.canRun(context))) continue;
+      if (!agent || (agent.canRun && !agent.canRun(pipelineContext))) continue;
       const key = options.idempotencyKey ? `${options.idempotencyKey}:${id}` : '';
       if (key && this.completedKeys.has(key)) continue;
-      const result = await this.runOne(agent, context, options);
+      const result = await this.runOne(agent, pipelineContext, options);
       results.push(result);
+      if (result.success && id === 'extractor') {
+        const extracted = (result.data?.insights ?? []) as AgentContext['currentInsights'];
+        pipelineContext.currentInsights = [...pipelineContext.currentInsights, ...extracted];
+      }
       if (result.success && key) this.completedKeys.add(key);
       if (!result.success) break;
     }

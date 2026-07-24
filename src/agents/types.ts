@@ -19,12 +19,18 @@ export type AgentId =
 
 export interface Insight {
   id: string;
+  sessionId?: string | null;
   type: 'fact' | 'decision' | 'action' | 'entity' | 'deadline' | 'open_loop';
   content: string;
   sourceTimestamp: number;
+  sourceSegmentIds?: string[];
   confidence: number;
   linkedInsightIds: string[];
+  pinned?: boolean;
+  archived?: boolean;
+  unresolved?: boolean;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface KnowledgeEvent {

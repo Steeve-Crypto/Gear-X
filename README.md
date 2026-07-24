@@ -11,7 +11,7 @@ Speak → extract → weave → archive → summarize → surface questions → 
 ## Solar System Model
 
 **The Sun**  
-- **Router** — central orchestrator
+- **Router** — central orchestrator. Inspects context and decides which planets wake. Does not extract, store, or speak itself.
 
 **The 8 Planetary Agents (complete)**
 
@@ -28,13 +28,16 @@ Speak → extract → weave → archive → summarize → surface questions → 
 
 ---
 
-## Questioner (now live)
+## Hybrid latency (free local vs paid Grok Voice)
 
-- Surfaces clarifying questions and unresolved open loops
-- Prefers local Ollama; rule-based fallback
-- Auto-runs every 5 insights and when listening stops
-- Manual **QUESTION** button in the UI
-- Emits `question_surfaced` events into the knowledge log
+| Path | Free (local) | Paid hybrid |
+|------|--------------|-------------|
+| Speech → first transcript | 300–1200 ms | **150–500 ms** |
+| Speech → first insight + gear update | 800–3500 ms | 600–2000 ms |
+| Short question → spoken answer | device TTS / n/a | **700–1800 ms** |
+
+Full tables, stage budgets, and measurement notes: **[docs/LATENCY.md](docs/LATENCY.md)**  
+Local brain timing helper: `src/services/benchmark.ts`
 
 ---
 

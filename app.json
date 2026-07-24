@@ -4,13 +4,8 @@
     "slug": "gear-x",
     "version": "0.1.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0a0a0a"
-    },
+    "splash": { "backgroundColor": "#0a0a0a" },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -22,19 +17,13 @@
       }
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0a0a0a"
-      },
       "package": "com.gearx.app",
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
+    "web": {},
     "plugins": [
       "expo-router",
       [

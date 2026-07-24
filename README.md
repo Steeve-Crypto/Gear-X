@@ -36,8 +36,24 @@ Speak → extract → weave → archive → summarize → surface questions → 
 | Speech → first insight + gear update | 800–3500 ms | 600–2000 ms |
 | Short question → spoken answer | device TTS / n/a | **700–1800 ms** |
 
-Full tables, stage budgets, and measurement notes: **[docs/LATENCY.md](docs/LATENCY.md)**  
-Local brain timing helper: `src/services/benchmark.ts`
+Full tables: **[docs/LATENCY.md](docs/LATENCY.md)**  
+Local brain timer: `src/services/benchmark.ts`  
+Paid hybrid client + live budget tracker: **[docs/PAID_VOICE.md](docs/PAID_VOICE.md)** · `src/paid/`
+
+---
+
+## Paid tier (stub ready)
+
+Grok Voice = ears + mouth. Local agents = brain + vault.
+
+```
+src/paid/
+  grokVoiceClient.ts   # WebSocket session, audio, tool bridge
+  tools.ts             # save / search / summarize / question → local agents
+  latencyTracker.ts    # pass / stretch / miss vs latency budgets
+```
+
+Requires backend ephemeral tokens — never put `XAI_API_KEY` in the app.
 
 ---
 

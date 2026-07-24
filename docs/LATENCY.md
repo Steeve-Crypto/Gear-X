@@ -2,7 +2,7 @@
 
 Target architecture: **free tier = fully local**, **paid tier = hybrid (Grok Voice ears/mouth + local solar-system brain)**.
 
-All numbers below are engineering targets / expected ranges for a hybrid setup on a modern phone + laptop (or small cloud) backend. Measure on your hardware with `src/services/benchmark.ts`.
+All numbers below are engineering targets / expected ranges for a hybrid setup on a modern phone + laptop (or small cloud) backend. Measure on your hardware with `src/services/benchmark.ts` (local brain) and `src/paid/latencyTracker.ts` (full hybrid turns).
 
 ---
 
@@ -63,6 +63,8 @@ User speech end → Grok STT final → Retriever → Grok TTS first byte.
 | SQLite archive p99 | < 100 ms | < 40 ms |
 | Offline capability | Full (rules + local LLM) | Same |
 
+Live checks: `src/paid/latencyTracker.ts` emits `pass` / `stretch` / `miss` per metric on every turn.
+
 ---
 
 ## 4. What actually moves the needle
@@ -77,7 +79,7 @@ User speech end → Grok STT final → Retriever → Grok TTS first byte.
 
 ## 5. How to measure
 
-Use the helper in `src/services/benchmark.ts`:
+### Local brain only
 
 ```ts
 import { runLocalPipelineBenchmark } from './src/services/benchmark';
@@ -89,13 +91,17 @@ const report = await runLocalPipelineBenchmark({
 console.log(report);
 ```
 
-It times Router → Extractor → Weaver → Archivist → Visualizer (and optionally Summarizer / Questioner / Retriever) and returns min / mean / p95 per stage.
+### Full hybrid turn (paid stub)
 
-For Grok Voice legs, log timestamps around:
-- audio chunk send
-- first partial transcript event
-- final transcript
-- TTS first audio byte
+```ts
+import { GrokVoiceClient } from './src/paid';
+
+// onLatencyReport receives TurnReport with budgetChecks
+```
+
+Marks logged: `audio_chunk_sent` → `first_partial_transcript` → `final_transcript` → local agents → `first_audio_byte`.
+
+See **[docs/PAID_VOICE.md](PAID_VOICE.md)** for the client stub and tool bridge.
 
 ---
 

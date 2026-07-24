@@ -1,13 +1,12 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Circle, G, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Circle, G, Path, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
   withRepeat,
   withTiming,
   Easing,
-  interpolate,
 } from 'react-native-reanimated';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
@@ -15,71 +14,92 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 interface GearClockProps {
   isListening: boolean;
   insightCount: number;
-  onInsightAdded?: () => void;
 }
 
 /**
- * GearClock — the hero visualization of Gear X.
- * Multiple interlocking gears spin at different speeds.
- * When listening, they accelerate. New insights add visual complexity over time.
+ * GearClock — Clock Planet visualization
+ *
+ * Central core (Sun) + orbiting planetary gears.
+ * As insights grow, more orbital bodies appear / gain teeth / rings.
+ * Feels like a living mechanical solar system / clock planet.
  */
 export function GearClock({ isListening, insightCount }: GearClockProps) {
-  const rotation1 = useSharedValue(0);
-  const rotation2 = useSharedValue(0);
-  const rotation3 = useSharedValue(0);
+  // Core spin
+  const coreRot = useSharedValue(0);
+  // Orbital positions (angles)
+  const orbit1 = useSharedValue(0);
+  const orbit2 = useSharedValue(0);
+  const orbit3 = useSharedValue(0);
+  const orbit4 = useSharedValue(0);
   const pulse = useSharedValue(0);
 
   useEffect(() => {
-    const speed = isListening ? 1 : 0.15;
+    const speed = isListening ? 1.4 : 0.25;
 
-    rotation1.value = withRepeat(
-      withTiming(360, { duration: 8000 / speed, easing: Easing.linear }),
+    // Core spins slowly
+    coreRot.value = withRepeat(
+      withTiming(360, { duration: 14000 / speed, easing: Easing.linear }),
       -1,
       false
     );
-    rotation2.value = withRepeat(
-      withTiming(-360, { duration: 12000 / speed, easing: Easing.linear }),
+
+    // Planets orbit at different speeds (Kepler-ish)
+    orbit1.value = withRepeat(
+      withTiming(360, { duration: 9000 / speed, easing: Easing.linear }),
       -1,
       false
     );
-    rotation3.value = withRepeat(
-      withTiming(360, { duration: 18000 / speed, easing: Easing.linear }),
+    orbit2.value = withRepeat(
+      withTiming(-360, { duration: 14000 / speed, easing: Easing.linear }),
+      -1,
+      false
+    );
+    orbit3.value = withRepeat(
+      withTiming(360, { duration: 19000 / speed, easing: Easing.linear }),
+      -1,
+      false
+    );
+    orbit4.value = withRepeat(
+      withTiming(-360, { duration: 26000 / speed, easing: Easing.linear }),
       -1,
       false
     );
 
     if (isListening) {
       pulse.value = withRepeat(
-        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.ease) }),
         -1,
         true
       );
     } else {
-      pulse.value = withTiming(0, { duration: 600 });
+      pulse.value = withTiming(0.3, { duration: 800 });
     }
   }, [isListening]);
 
-  const animatedProps1 = useAnimatedProps(() => ({
-    transform: [{ rotate: `${rotation1.value}deg` }],
+  const coreProps = useAnimatedProps(() => ({
+    transform: [{ rotate: `${coreRot.value}deg` }],
   }));
-  const animatedProps2 = useAnimatedProps(() => ({
-    transform: [{ rotate: `${rotation2.value}deg` }],
+  const o1Props = useAnimatedProps(() => ({
+    transform: [{ rotate: `${orbit1.value}deg` }],
   }));
-  const animatedProps3 = useAnimatedProps(() => ({
-    transform: [{ rotate: `${rotation3.value}deg` }],
+  const o2Props = useAnimatedProps(() => ({
+    transform: [{ rotate: `${orbit2.value}deg` }],
+  }));
+  const o3Props = useAnimatedProps(() => ({
+    transform: [{ rotate: `${orbit3.value}deg` }],
+  }));
+  const o4Props = useAnimatedProps(() => ({
+    transform: [{ rotate: `${orbit4.value}deg` }],
   }));
 
-  // Simple gear path generator (approximate involute teeth)
   const createGearPath = (cx: number, cy: number, outerR: number, innerR: number, teeth: number) => {
     const points: string[] = [];
     const angleStep = (Math.PI * 2) / teeth;
-
     for (let i = 0; i < teeth; i++) {
       const a1 = i * angleStep;
-      const a2 = a1 + angleStep * 0.35;
+      const a2 = a1 + angleStep * 0.32;
       const a3 = a1 + angleStep * 0.5;
-      const a4 = a1 + angleStep * 0.85;
-
+      const a4 = a1 + angleStep * 0.82;
       const x1 = cx + Math.cos(a1) * outerR;
       const y1 = cy + Math.sin(a1) * outerR;
       const x2 = cx + Math.cos(a2) * outerR;
@@ -88,79 +108,153 @@ export function GearClock({ isListening, insightCount }: GearClockProps) {
       const y3 = cy + Math.sin(a3) * innerR;
       const x4 = cx + Math.cos(a4) * innerR;
       const y4 = cy + Math.sin(a4) * innerR;
-
-      if (i === 0) {
-        points.push(`M ${x1} ${y1}`);
-      }
+      if (i === 0) points.push(`M ${x1} ${y1}`);
       points.push(`L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4}`);
     }
     points.push('Z');
     return points.join(' ');
   };
 
-  // More teeth appear as insights grow (visual complexity)
-  const teeth1 = 12 + Math.min(insightCount, 20);
-  const teeth2 = 8 + Math.min(Math.floor(insightCount / 2), 12);
-  const teeth3 = 16 + Math.min(Math.floor(insightCount / 3), 16);
+  // Complexity grows with insights (clock-planet evolution)
+  const coreTeeth = 14 + Math.min(insightCount, 18);
+  const p1Teeth = 8 + Math.min(Math.floor(insightCount / 2), 10);
+  const p2Teeth = 10 + Math.min(Math.floor(insightCount / 3), 8);
+  const p3Teeth = 7 + Math.min(Math.floor(insightCount / 2), 9);
+  const showPlanet4 = insightCount >= 4;
+  const showRings = insightCount >= 2;
 
   return (
     <View style={styles.container}>
       <Svg width="100%" height="100%" viewBox="0 0 320 320">
         <Defs>
           <LinearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
-            <Stop offset="0%" stopColor="#d4c4a8" />
-            <Stop offset="50%" stopColor="#8a7a60" />
+            <Stop offset="0%" stopColor="#e8dcc0" />
+            <Stop offset="45%" stopColor="#a09070" />
             <Stop offset="100%" stopColor="#5a4a30" />
           </LinearGradient>
-          <LinearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
-            <Stop offset="0%" stopColor="#c08040" stopOpacity="0.6" />
-            <Stop offset="100%" stopColor="#c08040" stopOpacity="0" />
+          <LinearGradient id="coreGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor="#f0a040" stopOpacity="0.9" />
+            <Stop offset="100%" stopColor="#c06020" stopOpacity="0.4" />
+          </LinearGradient>
+          <LinearGradient id="orbitRing" x1="0%" y1="0%" x2="100%" y2="0%">
+            <Stop offset="0%" stopColor="#6a5a40" stopOpacity="0.3" />
+            <Stop offset="50%" stopColor="#c08040" stopOpacity="0.55" />
+            <Stop offset="100%" stopColor="#6a5a40" stopOpacity="0.3" />
           </LinearGradient>
         </Defs>
 
-        {/* Background circle */}
-        <Circle cx="160" cy="160" r="150" fill="#111" stroke="#2a2a1a" strokeWidth="2" />
+        {/* Deep space background */}
+        <Circle cx="160" cy="160" r="155" fill="#080808" />
 
-        {/* Outer ring */}
-        <Circle cx="160" cy="160" r="142" fill="none" stroke="#3a3a2a" strokeWidth="1" />
+        {/* Outer clock ticks (hour markers) */}
+        {Array.from({ length: 12 }).map((_, i) => {
+          const angle = (i * 30 * Math.PI) / 180;
+          const x1 = 160 + Math.cos(angle) * 138;
+          const y1 = 160 + Math.sin(angle) * 138;
+          const x2 = 160 + Math.cos(angle) * 148;
+          const y2 = 160 + Math.sin(angle) * 148;
+          return (
+            <Line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#3a3a2a"
+              strokeWidth={i % 3 === 0 ? 2.5 : 1}
+            />
+          );
+        })}
 
-        {/* Gear 1 - large central */}
-        <AnimatedG animatedProps={animatedProps1} origin="160, 160">
+        {/* Orbital rings (appear as knowledge grows) */}
+        {showRings && (
+          <>
+            <Circle cx="160" cy="160" r="72" fill="none" stroke="url(#orbitRing)" strokeWidth="1.2" strokeDasharray="4 6" />
+            <Circle cx="160" cy="160" r="105" fill="none" stroke="url(#orbitRing)" strokeWidth="1" strokeDasharray="3 8" />
+          </>
+        )}
+        {insightCount >= 6 && (
+          <Circle cx="160" cy="160" r="128" fill="none" stroke="#4a3a25" strokeWidth="0.8" strokeDasharray="2 10" />
+        )}
+
+        {/* === CENTRAL CORE (Sun / Clock Heart) === */}
+        <AnimatedG animatedProps={coreProps} origin="160, 160">
           <Path
-            d={createGearPath(160, 160, 95, 78, teeth1)}
+            d={createGearPath(160, 160, 42, 30, coreTeeth)}
             fill="url(#metal)"
-            stroke="#4a3a20"
+            stroke="#5a4a28"
             strokeWidth="1.5"
           />
-          <Circle cx="160" cy="160" r="28" fill="#1a1a12" stroke="#5a4a30" strokeWidth="2" />
-          <Circle cx="160" cy="160" r="8" fill="#c08040" />
+          <Circle cx="160" cy="160" r="18" fill="url(#coreGlow)" />
+          <Circle cx="160" cy="160" r="7" fill="#1a1008" />
+          <Circle cx="160" cy="160" r="3" fill="#f0a040" />
         </AnimatedG>
 
-        {/* Gear 2 - upper right */}
-        <AnimatedG animatedProps={animatedProps2} origin="230, 90">
-          <Path
-            d={createGearPath(230, 90, 48, 36, teeth2)}
-            fill="url(#metal)"
-            stroke="#4a3a20"
-            strokeWidth="1.2"
-          />
-          <Circle cx="230" cy="90" r="12" fill="#1a1a12" stroke="#5a4a30" strokeWidth="1.5" />
+        {/* === PLANET 1 (inner orbit) === */}
+        <AnimatedG animatedProps={o1Props} origin="160, 160">
+          <G>
+            <Path
+              d={createGearPath(160 + 72, 160, 22, 15, p1Teeth)}
+              fill="url(#metal)"
+              stroke="#4a3a20"
+              strokeWidth="1"
+            />
+            <Circle cx={160 + 72} cy="160" r="6" fill="#1a1a12" stroke="#6a5a40" strokeWidth="1" />
+          </G>
         </AnimatedG>
 
-        {/* Gear 3 - lower left */}
-        <AnimatedG animatedProps={animatedProps3} origin="85, 220">
-          <Path
-            d={createGearPath(85, 220, 55, 42, teeth3)}
-            fill="url(#metal)"
-            stroke="#4a3a20"
-            strokeWidth="1.2"
-          />
-          <Circle cx="85" cy="220" r="14" fill="#1a1a12" stroke="#5a4a30" strokeWidth="1.5" />
+        {/* === PLANET 2 === */}
+        <AnimatedG animatedProps={o2Props} origin="160, 160">
+          <G>
+            <Path
+              d={createGearPath(160 + 105, 160, 26, 18, p2Teeth)}
+              fill="url(#metal)"
+              stroke="#4a3a20"
+              strokeWidth="1.1"
+            />
+            <Circle cx={160 + 105} cy="160" r="7" fill="#1a1a12" stroke="#6a5a40" strokeWidth="1" />
+          </G>
         </AnimatedG>
 
-        {/* Listening glow indicator */}
+        {/* === PLANET 3 === */}
+        <AnimatedG animatedProps={o3Props} origin="160, 160">
+          <G>
+            <Path
+              d={createGearPath(160 + 105, 160, 18, 12, p3Teeth)}
+              fill="url(#metal)"
+              stroke="#4a3a20"
+              strokeWidth="1"
+            />
+            {/* offset angle so it doesn't overlap planet 2 visually at start */}
+          </G>
+        </AnimatedG>
+
+        {/* === PLANET 4 (appears after enough insights) === */}
+        {showPlanet4 && (
+          <AnimatedG animatedProps={o4Props} origin="160, 160">
+            <G>
+              <Path
+                d={createGearPath(160 + 128, 160, 16, 11, 8 + Math.min(insightCount, 6))}
+                fill="url(#metal)"
+                stroke="#4a3a20"
+                strokeWidth="1"
+              />
+              <Circle cx={160 + 128} cy="160" r="5" fill="#1a1a12" stroke="#6a5a40" strokeWidth="0.8" />
+            </G>
+          </AnimatedG>
+        )}
+
+        {/* Listening pulse ring */}
         {isListening && (
-          <Circle cx="160" cy="160" r="148" fill="none" stroke="#c08040" strokeWidth="2" opacity="0.4" />
+          <Circle
+            cx="160"
+            cy="160"
+            r="152"
+            fill="none"
+            stroke="#c08040"
+            strokeWidth="2"
+            opacity="0.35"
+          />
         )}
       </Svg>
     </View>

@@ -1,62 +1,62 @@
 # Gear X
 
-**A living mechanical clock that listens, thinks, and evolves.**
+**A living mechanical clock-planet that listens, thinks, and evolves.**
 
-Open the app → the gears start turning.  
-Speak → the agents extract insight.  
-Every insight physically grows the mechanism (new teeth, linkages, glow).
+Open the app → the central core and orbiting gears begin to turn.  
+Speak → local agents extract insight.  
+Every insight physically grows the solar system: more teeth, new orbital bodies, denser rings.
 
-This is the project that makes people say: *"This kid built a thinking clock."*
-
-> Mobile-first (Expo). The pure agent core is TypeScript, so a Linux desktop shell (Tauri/Electron) can come later.
+This is the project that makes people say: *"This kid built a thinking clock planet."*
 
 ---
 
 ## Architecture: Solar System Model
 
 **The Sun (central core)**  
-- **Router** — the only orchestrator. Looks at context (listening? new speech? user query?) and decides which planetary agents to wake.
+- **Router** — the only orchestrator. Decides which planetary agents wake.
 
 **The 8 Planetary Agents**
 
 | # | Agent | Role |
 |---|-------|------|
 | 1 | **Listener** | Real-time speech-to-text + speaker awareness |
-| 2 | **Extractor** | Pulls structured insights (facts, decisions, actions, deadlines, open loops) |
+| 2 | **Extractor** | Pulls structured insights (now powered by local LLM when available) |
 | 3 | **Connector** | Links new insights into the living knowledge graph |
 | 4 | **Summarizer** | Compresses long conversations into durable notes |
 | 5 | **Questioner** | Surfaces clarifying questions and open loops |
-| 6 | **Visualizer** | Turns knowledge events into gear animations (teeth, speed, linkages, glow) |
+| 6 | **Visualizer** | Turns knowledge into clock-planet animations (orbits, teeth, rings) |
 | 7 | **Retriever** | Answers natural-language questions against everything heard |
 | 8 | **Archivist** | Long-term storage, indexing, and persistence |
 
-Router is the Sun. The eight planets do the actual work.
+---
+
+## Local LLM (Ollama / llama.cpp)
+
+Extractor (and future agents) prefer a local model via Ollama.
+
+**On your machine:**
+```bash
+ollama serve
+ollama pull qwen2.5:3b   # or llama3.2:3b / phi3:mini
+```
+
+Default endpoint: `http://localhost:11434`  
+When testing on a physical phone, change the base URL in `src/services/llm.ts` to your laptop’s LAN IP (e.g. `http://192.168.1.42:11434`).
+
+If Ollama is unreachable the system automatically falls back to fast rule-based extraction so the demo never breaks.
 
 ---
 
 ## Current Status
 
-✅ Repository + full architecture  
-✅ Expo mobile scaffold + GearClock (spinning gears that grow teeth)  
-✅ Real microphone wiring (expo-av)  
-✅ Listener agent  
-✅ **Extractor agent** — produces real Insights from speech  
-✅ **Visualizer agent** — converts insights into gear commands  
-✅ Live pipeline: speech → Extractor → Visualizer → teeth appear in real time  
+✅ Clock-planet visualization (central core + orbiting gears + rings that grow with insight)  
+✅ Real microphone (expo-av)  
+✅ Listener + Router  
+✅ Extractor with **local LLM** (Ollama) + rule fallback  
+✅ Visualizer driving planetary growth stages  
+✅ Live pipeline: speech → Extractor → Visualizer → gears/planets evolve  
 
-**Next planets to fully implement:** Connector, Summarizer, Questioner, Retriever, Archivist.
-
----
-
-## How the live loop works right now
-
-1. You hit **START LISTENING** → mic opens, gears accelerate + glow  
-2. Simulated (and later real) speech arrives  
-3. **Listener** cleans it  
-4. **Router** decides who wakes  
-5. **Extractor** pulls Insights  
-6. **Visualizer** issues `add_tooth` / `pulse` / `glow` commands  
-7. GearClock reacts → more teeth appear on the gears  
+**Next:** Connector, Archivist (SQLite), Retriever, and tighter LLM prompts.
 
 ---
 

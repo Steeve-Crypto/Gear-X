@@ -1,64 +1,59 @@
-import { Agent, AgentContext, AgentResult, KnowledgeEvent, VisualizerCommand } from './types';
+import { Agent, AgentContext, AgentResult, VisualizerCommand } from './types';
 
 /**
- * Visualizer Agent
- * Translates knowledge events into concrete gear commands.
- * This is what makes the clock feel alive: new teeth, speed changes, linkages, pulses.
+ * Visualizer Agent — Clock Planet edition
+ * Translates knowledge growth into orbital / planetary gear commands.
+ * More insights = more planets, denser teeth, stronger rings, faster orbits.
  */
 export const visualizerAgent: Agent = {
   id: 'visualizer',
   name: 'Visualizer',
-  description: 'Translates knowledge events into gear animations (new teeth, speed, linkages, glow).',
+  description: 'Turns knowledge events into clock-planet animations (orbits, teeth, rings, glow).',
   continuous: true,
 
   async run(ctx: AgentContext): Promise<AgentResult> {
     const commands: VisualizerCommand[] = [];
+    const count = ctx.currentInsights.length;
 
-    // Base state while listening
+    // Listening state
     if (ctx.isListening) {
-      commands.push({ action: 'glow', intensity: 0.6 });
-      commands.push({ action: 'change_speed', intensity: 1.0 });
+      commands.push({ action: 'glow', intensity: 0.7 });
+      commands.push({ action: 'change_speed', intensity: 1.4 });
     } else {
-      commands.push({ action: 'change_speed', intensity: 0.15 });
+      commands.push({ action: 'change_speed', intensity: 0.25 });
     }
 
-    // Every insight adds teeth / complexity
-    const insightCount = ctx.currentInsights.length;
-    if (insightCount > 0) {
-      // Add teeth to different gears based on count
+    // Core always gains teeth
+    if (count > 0) {
       commands.push({
         action: 'add_tooth',
-        gearIndex: 0, // central gear
-        intensity: Math.min(insightCount, 20),
+        gearIndex: 0, // central sun/core
+        intensity: Math.min(count, 18),
       });
+    }
 
-      if (insightCount >= 2) {
-        commands.push({
-          action: 'add_tooth',
-          gearIndex: 1,
-          intensity: Math.floor(insightCount / 2),
-        });
-      }
-
-      if (insightCount >= 3) {
-        commands.push({
-          action: 'add_tooth',
-          gearIndex: 2,
-          intensity: Math.floor(insightCount / 3),
-        });
-      }
-
-      // Occasional linkage / pulse when knowledge grows
-      if (insightCount % 3 === 0) {
-        commands.push({ action: 'add_linkage', intensity: 0.8 });
-        commands.push({ action: 'pulse', intensity: 1.0 });
-      }
+    // Planetary growth stages
+    if (count >= 1) {
+      commands.push({ action: 'add_tooth', gearIndex: 1, intensity: Math.floor(count / 2) });
+    }
+    if (count >= 2) {
+      commands.push({ action: 'add_linkage', intensity: 0.6 }); // rings appear
+    }
+    if (count >= 3) {
+      commands.push({ action: 'add_tooth', gearIndex: 2, intensity: Math.floor(count / 3) });
+    }
+    if (count >= 4) {
+      commands.push({ action: 'add_tooth', gearIndex: 3, intensity: Math.floor(count / 2) }); // 4th planet appears
+    }
+    if (count >= 6) {
+      commands.push({ action: 'add_linkage', intensity: 0.9 }); // outer ring
+      commands.push({ action: 'pulse', intensity: 1.0 });
     }
 
     return {
       agentId: 'visualizer',
       success: true,
-      data: { commands },
+      data: { commands, stage: count },
       visualCommands: commands,
     };
   },

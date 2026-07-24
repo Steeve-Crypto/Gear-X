@@ -1,5 +1,6 @@
 import { GearXError } from '../../domain/errors';
 import { TranscriptionInput, TranscriptionProvider, TranscriptionResult } from './types';
+import { canUseProvider } from '../../domain/privacy';
 
 export class DeviceTranscriptionAdapter implements TranscriptionProvider {
   id = 'device-adapter';
@@ -47,7 +48,7 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
   constructor(private readonly config: BackendTranscriptionConfig) {}
 
   async isAvailable(): Promise<boolean> {
-    if (!this.config.hasRemoteConsent()) return false;
+    if (!canUseProvider(this.remote, this.config.hasRemoteConsent())) return false;
     try {
       const response = await fetch(`${this.config.baseUrl}/health`, { method: 'GET' });
       return response.ok;
@@ -57,7 +58,7 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
   }
 
   async transcribe(input: TranscriptionInput): Promise<TranscriptionResult> {
-    if (!this.config.hasRemoteConsent()) {
+    if (!canUseProvider(this.remote, this.config.hasRemoteConsent())) {
       throw new GearXError('REMOTE_CONSENT_MISSING', 'Remote transcription consent is required.');
     }
     const token = await this.config.getAccessToken();

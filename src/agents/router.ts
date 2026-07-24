@@ -1,53 +1,28 @@
-import { Agent, AgentContext, AgentResult, AgentId } from './types';
+import { decideAgents } from '../domain/routing';
+import { Agent, AgentResult } from './types';
 
 /**
- * Router Agent (the Sun)
- * Decides which planetary agents to activate based on the current context.
+ * Router is the central orchestrator. It only selects eligible agents;
+ * specialist work remains inside the eight planetary agents.
  */
 export const routerAgent: Agent = {
   id: 'router',
   name: 'Router',
-  description: 'Orchestrator. Decides which agents activate for every audio chunk or query.',
+  description: 'Selects eligible agents from current application context.',
   continuous: true,
+  idempotent: true,
 
-  async run(ctx: AgentContext): Promise<AgentResult> {
-    const activeAgents: AgentId[] = [];
-
-    if (ctx.isListening) {
-      activeAgents.push('listener');
-    }
-
-    // New speech → Extractor + Weaver + Visualizer + Archivist
-    if (ctx.recentTranscript && ctx.recentTranscript.length > 20) {
-      activeAgents.push('extractor');
-      activeAgents.push('weaver');
-      activeAgents.push('visualizer');
-      activeAgents.push('archivist');
-    }
-
-    // Explicit question → Retriever
-    if (ctx.userQuery) {
-      activeAgents.push('retriever');
-    }
-
-    // Every 5 insights (or more) → Summarizer + Questioner
-    if (ctx.currentInsights.length >= 5 && ctx.currentInsights.length % 5 === 0) {
-      activeAgents.push('summarizer');
-      activeAgents.push('questioner');
-    }
-
-    // Always archive when we have knowledge
-    if (ctx.currentInsights.length > 0) {
-      activeAgents.push('archivist');
-    }
-
+  async run(ctx): Promise<AgentResult> {
+    const activeAgents = decideAgents({
+      isListening: ctx.isListening,
+      transcriptLength: ctx.recentTranscript?.length ?? 0,
+      insightCount: ctx.currentInsights.length,
+      hasUserQuery: Boolean(ctx.userQuery?.trim()),
+    });
     return {
       agentId: 'router',
       success: true,
-      data: {
-        activeAgents: [...new Set(activeAgents)],
-        reason: 'Context-based routing',
-      },
+      data: { activeAgents, reason: 'Deterministic context routing' },
     };
   },
 };

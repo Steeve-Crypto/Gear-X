@@ -1,8 +1,8 @@
 import { Agent, AgentContext, AgentResult } from './types';
 import { callLocalLLM } from '../services/llm';
 import { logEvent } from '../services/database';
-import { OpenLoop } from '../domain/models';
 import { knowledgeRepository } from '../repositories/knowledgeRepository';
+import { classifyQuestion } from '../domain/validation';
 
 /**
  * Questioner Agent (Planet 5)
@@ -90,20 +90,11 @@ No markdown. No extra text.`;
     }
 
     await logEvent('question_surfaced', { questions, source, count: questions.length });
-    const categoryFor = (question: string): OpenLoop['category'] => {
-      const value = question.toLowerCase();
-      if (value.includes('deadline') || value.includes('by when')) return 'deadline';
-      if (value.includes('risk')) return 'risk';
-      if (value.includes('decision') || value.includes('yes/no')) return 'decision';
-      if (value.includes('owner') || value.includes('next step')) return 'follow_up';
-      if (value.includes('uncertain') || value.includes('realistic')) return 'uncertainty';
-      return 'question';
-    };
     await knowledgeRepository.saveLoops(
       questions.map((question) => ({
         sessionId: ctx.sessionId ?? null,
         insightId: insights.find((insight) => insight.type === 'open_loop')?.id ?? null,
-        category: categoryFor(question),
+        category: classifyQuestion(question),
         question,
         priority: question.toLowerCase().includes('deadline') ? 'high' : 'medium',
       })),

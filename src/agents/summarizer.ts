@@ -1,6 +1,7 @@
 import { Agent, AgentContext, AgentResult } from './types';
 import { callLocalLLM } from '../services/llm';
 import { saveSummary, logEvent, SummaryRecord } from '../services/database';
+import { validateSummaryOutput } from '../domain/validation';
 
 /**
  * Summarizer Agent (Planet 4)
@@ -51,13 +52,10 @@ No markdown. No extra text.`;
 
     if (llmRaw) {
       try {
-        const cleaned = llmRaw.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-        if (parsed.title && parsed.body) {
-          title = String(parsed.title).slice(0, 80);
-          body = String(parsed.body).slice(0, 1200);
-          source = 'llm';
-        }
+        const parsed = validateSummaryOutput(llmRaw);
+        title = parsed.title;
+        body = parsed.body;
+        source = 'llm';
       } catch (e) {
         console.warn('[Summarizer] LLM JSON parse failed, using rules', e);
       }

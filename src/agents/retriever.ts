@@ -1,6 +1,7 @@
 import { Agent, AgentContext, AgentResult, Insight } from './types';
 import { searchInsights } from '../services/database';
 import { callLocalLLM } from '../services/llm';
+import { rankEvidence, retrievalQuality } from '../domain/retrieval';
 
 /**
  * Retriever Agent (Planet 7)
@@ -26,7 +27,9 @@ export const retrieverAgent: Agent = {
 
     try {
       // 1. Pull relevant insights from the vault
-      const matches = await searchInsights(query, 10);
+      const candidates = await searchInsights(query, 30);
+      const ranked = rankEvidence(query, candidates).slice(0, 10);
+      const matches = ranked.map(({ score: _score, ...match }) => match);
 
       if (matches.length === 0) {
         return {
@@ -75,10 +78,7 @@ Do not invent facts.`;
           answer,
           matches,
           matchCount: matches.length,
-          retrievalQuality: Math.min(
-            1,
-            matches.reduce((total, match) => total + match.confidence, 0) / matches.length,
-          ),
+          retrievalQuality: retrievalQuality(ranked.map((item) => item.score)),
           source,
           query,
         },

@@ -1,5 +1,6 @@
 import { Agent, AgentContext, AgentResult, Insight, KnowledgeEvent } from './types';
 import { callLocalLLM } from '../services/llm';
+import { parseInsightOutput } from '../domain/validation';
 
 /**
  * Extractor Agent
@@ -46,20 +47,15 @@ Rules:
 
     if (llmRaw) {
       try {
-        // Clean possible markdown fences
-        const cleaned = llmRaw.replace(/```json|```/g, '').trim();
-        const parsed = JSON.parse(cleaned);
-
-        if (Array.isArray(parsed)) {
-          insights = parsed.slice(0, 5).map((item: any, i: number) => ({
+        const parsed = parseInsightOutput(llmRaw);
+        if (parsed.length) {
+          insights = parsed.map((item, i) => ({
             id: `ins_${now}_${i}`,
             sessionId: ctx.sessionId ?? null,
-            type: (['fact', 'decision', 'action', 'entity', 'deadline', 'open_loop'].includes(item.type)
-              ? item.type
-              : 'fact') as Insight['type'],
-            content: String(item.content || '').slice(0, 200),
+            type: item.type,
+            content: item.content,
             sourceTimestamp: now,
-            confidence: Math.min(1, Math.max(0.5, Number(item.confidence) || 0.75)),
+            confidence: item.confidence,
             linkedInsightIds: [],
             createdAt: now,
             updatedAt: now,

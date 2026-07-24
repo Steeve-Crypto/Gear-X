@@ -14,4 +14,4 @@ This task owns the full suite and manual matrix.
 ## Rollback considerations
 Test tooling must not affect production bundles.
 ## Completion status
-Pending.
+In progress: deterministic domain tests pass; SQLite and native UI/device suites remain.

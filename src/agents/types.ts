@@ -44,6 +44,9 @@ export interface AgentContext {
   currentInsights: Insight[];
   isListening: boolean;
   userQuery?: string;
+  sessionId?: string;
+  signal?: AbortSignal;
+  remoteConsent?: boolean;
 }
 
 export interface AgentResult {
@@ -60,5 +63,11 @@ export interface Agent {
   name: string;
   description: string;
   continuous: boolean;
+  dependencies?: AgentId[];
+  timeoutMs?: number;
+  retryLimit?: number;
+  privacy?: 'local_only' | 'remote_optional';
+  idempotent?: boolean;
+  canRun?: (ctx: AgentContext) => boolean;
   run: (ctx: AgentContext) => Promise<AgentResult>;
 }

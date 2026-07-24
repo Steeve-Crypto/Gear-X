@@ -7,13 +7,18 @@ import Animated, {
   withRepeat,
   withTiming,
   Easing,
+  cancelAnimation,
 } from 'react-native-reanimated';
+import { AgentId } from '../agents/types';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
 interface GearClockProps {
   isListening: boolean;
   insightCount: number;
+  activeAgents?: AgentId[];
+  reducedMotion?: boolean;
+  lowPerformanceMode?: boolean;
 }
 
 /**
@@ -23,7 +28,13 @@ interface GearClockProps {
  * As insights grow, more orbital bodies appear / gain teeth / rings.
  * Feels like a living mechanical solar system / clock planet.
  */
-export function GearClock({ isListening, insightCount }: GearClockProps) {
+export function GearClock({
+  isListening,
+  insightCount,
+  activeAgents = [],
+  reducedMotion = false,
+  lowPerformanceMode = false,
+}: GearClockProps) {
   // Core spin
   const coreRot = useSharedValue(0);
   // Orbital positions (angles)
@@ -34,6 +45,16 @@ export function GearClock({ isListening, insightCount }: GearClockProps) {
   const pulse = useSharedValue(0);
 
   useEffect(() => {
+    if (reducedMotion) {
+      [coreRot, orbit1, orbit2, orbit3, orbit4, pulse].forEach(cancelAnimation);
+      coreRot.value = withTiming(0, { duration: 200 });
+      orbit1.value = withTiming(0, { duration: 200 });
+      orbit2.value = withTiming(0, { duration: 200 });
+      orbit3.value = withTiming(0, { duration: 200 });
+      orbit4.value = withTiming(0, { duration: 200 });
+      pulse.value = withTiming(isListening ? 0.7 : 0.3, { duration: 200 });
+      return;
+    }
     const speed = isListening ? 1.4 : 0.25;
 
     // Core spins slowly
@@ -74,7 +95,10 @@ export function GearClock({ isListening, insightCount }: GearClockProps) {
     } else {
       pulse.value = withTiming(0.3, { duration: 800 });
     }
-  }, [isListening]);
+    return () => {
+      [coreRot, orbit1, orbit2, orbit3, orbit4, pulse].forEach(cancelAnimation);
+    };
+  }, [isListening, reducedMotion]);
 
   const coreProps = useAnimatedProps(() => ({
     transform: [{ rotate: `${coreRot.value}deg` }],
@@ -120,8 +144,10 @@ export function GearClock({ isListening, insightCount }: GearClockProps) {
   const p1Teeth = 8 + Math.min(Math.floor(insightCount / 2), 10);
   const p2Teeth = 10 + Math.min(Math.floor(insightCount / 3), 8);
   const p3Teeth = 7 + Math.min(Math.floor(insightCount / 2), 9);
-  const showPlanet4 = insightCount >= 4;
-  const showRings = insightCount >= 2;
+  const showPlanet4 = !lowPerformanceMode && insightCount >= 4;
+  const showRings = !lowPerformanceMode && insightCount >= 2;
+  const isProcessing = activeAgents.some((id) => id !== 'listener' && id !== 'visualizer');
+  const hasOpenLoops = activeAgents.includes('questioner');
 
   return (
     <View style={styles.container}>
@@ -175,6 +201,13 @@ export function GearClock({ isListening, insightCount }: GearClockProps) {
         )}
         {insightCount >= 6 && (
           <Circle cx="160" cy="160" r="128" fill="none" stroke="#4a3a25" strokeWidth="0.8" strokeDasharray="2 10" />
+        )}
+
+        {isProcessing && (
+          <Circle cx="160" cy="160" r="54" fill="none" stroke="#d6a85f" strokeWidth="2" strokeDasharray="2 5" />
+        )}
+        {hasOpenLoops && (
+          <Circle cx="160" cy="34" r="4" fill="#c97063" stroke="#e9e1d2" strokeWidth="1" />
         )}
 
         {/* === CENTRAL CORE (Sun / Clock Heart) === */}

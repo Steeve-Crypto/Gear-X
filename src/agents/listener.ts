@@ -4,7 +4,7 @@ import { Agent, AgentContext, AgentResult } from './types';
  * Listener Agent
  * Handles real-time speech-to-text and basic speaker awareness.
  * In production this will use Moonshine / Whisper.cpp / on-device STT.
- * For the current MVP it receives audio status from the app and produces a mock transcript stream.
+ * Transcription is supplied by a configured TranscriptionProvider after audio capture.
  */
 export const listenerAgent: Agent = {
   id: 'listener',
@@ -27,7 +27,7 @@ export const listenerAgent: Agent = {
     // 3. Optionally do simple speaker diarization
     // 4. Return clean rolling transcript
 
-    // MVP: we pass the transcript that the UI already captured or simulated
+    // The capture pipeline passes only provider-produced transcript text.
     const transcript = ctx.recentTranscript || '';
 
     return {
@@ -37,7 +37,7 @@ export const listenerAgent: Agent = {
         status: 'listening',
         transcript,
         confidence: 0.85,
-        speakers: ['Speaker 1'], // placeholder for diarization
+        speakers: [],
       },
     };
   },

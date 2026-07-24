@@ -3,55 +3,10 @@
  * Archivist + Retriever + Summarizer backend
  */
 
-import * as SQLite from 'expo-sqlite';
 import { Insight } from '../agents/types';
+import { openAppDatabase } from '../infrastructure/database';
 
-let db: SQLite.SQLiteDatabase | null = null;
-
-export async function getDb(): Promise<SQLite.SQLiteDatabase> {
-  if (db) return db;
-  db = await SQLite.openDatabaseAsync('gearx.db');
-  await initSchema(db);
-  return db;
-}
-
-async function initSchema(database: SQLite.SQLiteDatabase) {
-  await database.execAsync(`
-    PRAGMA journal_mode = WAL;
-
-    CREATE TABLE IF NOT EXISTS insights (
-      id TEXT PRIMARY KEY NOT NULL,
-      type TEXT NOT NULL,
-      content TEXT NOT NULL,
-      source_timestamp INTEGER NOT NULL,
-      confidence REAL NOT NULL,
-      linked_insight_ids TEXT DEFAULT '[]',
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS knowledge_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      type TEXT NOT NULL,
-      payload TEXT NOT NULL,
-      timestamp INTEGER NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS summaries (
-      id TEXT PRIMARY KEY NOT NULL,
-      title TEXT NOT NULL,
-      body TEXT NOT NULL,
-      insight_ids TEXT DEFAULT '[]',
-      insight_count INTEGER NOT NULL,
-      source TEXT DEFAULT 'rules',
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_insights_created ON insights(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_insights_type ON insights(type);
-    CREATE INDEX IF NOT EXISTS idx_events_ts ON knowledge_events(timestamp DESC);
-    CREATE INDEX IF NOT EXISTS idx_summaries_created ON summaries(created_at DESC);
-  `);
-}
+export const getDb = openAppDatabase;
 
 export async function saveInsight(insight: Insight): Promise<void> {
   const database = await getDb();
@@ -241,7 +196,18 @@ export async function logEvent(type: string, payload: any): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   const database = await getDb();
-  await database.execAsync(
-    'DELETE FROM insights; DELETE FROM knowledge_events; DELETE FROM summaries;'
-  );
+  await database.withTransactionAsync(async () => {
+    await database.execAsync(`
+      DELETE FROM provider_runs;
+      DELETE FROM agent_runs;
+      DELETE FROM thread_insights;
+      DELETE FROM questions;
+      DELETE FROM summaries;
+      DELETE FROM insights;
+      DELETE FROM transcript_segments;
+      DELETE FROM sessions;
+      DELETE FROM threads;
+      DELETE FROM knowledge_events;
+    `);
+  });
 }

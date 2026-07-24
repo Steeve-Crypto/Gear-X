@@ -62,6 +62,26 @@ export async function stopListening(): Promise<string | null> {
   }
 }
 
+export async function pauseListening(): Promise<boolean> {
+  if (!recording) return false;
+  try {
+    await recording.pauseAsync();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function resumeListening(): Promise<boolean> {
+  if (!recording) return false;
+  try {
+    await recording.startAsync();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function isCurrentlyRecording(): boolean {
   return recording !== null;
 }

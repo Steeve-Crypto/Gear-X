@@ -70,12 +70,17 @@ export class GrokVoiceClient {
       // Note: standard RN WebSocket may not support custom headers.
       // Production path: backend upgrades connection or returns a short-lived URL.
       try {
-        this.ws = new WebSocket(REALTIME_URL, undefined, {
-          // @ts-expect-error — headers supported in some RN / node polyfills
+        const HeaderWebSocket = WebSocket as unknown as new (
+          url: string,
+          protocols?: string | string[],
+          options?: { headers?: Record<string, string> },
+        ) => WebSocket;
+        this.ws = new HeaderWebSocket(REALTIME_URL, undefined, {
+          // Header options are supported by React Native's runtime WebSocket.
           headers: {
             Authorization: `Bearer ${this.config.ephemeralToken}`,
           },
-        } as any);
+        });
       } catch (e: any) {
         // Fallback: token as query (only if your backend issues URL-safe ephemeral tokens)
         this.ws = new WebSocket(

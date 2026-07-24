@@ -1,18 +1,22 @@
 /**
  * Gear X Multi-Agent System Types
  * Application-level agents (not MoE layers).
- * The Router decides which agents to activate per turn.
+ *
+ * Solar system model:
+ *   Router = the Sun (central orchestrator)
+ *   8 planetary agents do the actual work
  */
 
 export type AgentId =
-  | 'router'
+  | 'router'      // the Sun
   | 'listener'
   | 'extractor'
   | 'connector'
   | 'summarizer'
   | 'questioner'
   | 'visualizer'
-  | 'retriever';
+  | 'retriever'
+  | 'archivist';  // 8th planet
 
 export interface Insight {
   id: string;

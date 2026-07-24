@@ -2,52 +2,61 @@
 
 **A living mechanical clock that listens, thinks, and evolves.**
 
-Gear X is a mobile-first real-time voice memory system. Open the app and the ornate gears begin to turn like the inside of a clock. The AI listens to conversations around you, extracts insights with a multi-agent system, and physically grows the mechanism — new teeth appear, linkages shift, and the whole apparatus becomes a visual map of your knowledge.
+Open the app → the gears start turning.  
+Speak → the agents extract insight.  
+Every insight physically grows the mechanism (new teeth, linkages, glow).
 
 This is the project that makes people say: *"This kid built a thinking clock."*
 
-> Note: Built with Expo (React Native) for mobile. A pure Linux desktop version is possible later with Tauri or Electron + the same agent core.
+> Mobile-first (Expo). The pure agent core is TypeScript, so a Linux desktop shell (Tauri/Electron) can come later.
 
 ---
 
-## The 8 Agents
+## Architecture: Solar System Model
 
-These are **application-level agents** (not Mixture-of-Experts layers inside one model). A central **Router** decides which ones to wake based on the current audio stream and user intent.
+**The Sun (central core)**  
+- **Router** — the only orchestrator. Looks at context (listening? new speech? user query?) and decides which planetary agents to wake.
+
+**The 8 Planetary Agents**
 
 | # | Agent | Role |
 |---|-------|------|
-| 1 | **Router** | The orchestrator. Looks at the current context (listening? new transcript? user query?) and decides which other agents to activate. |
-| 2 | **Listener** | Real-time speech-to-text + basic speaker awareness. Turns raw microphone audio into clean text that the rest of the system can use. |
-| 3 | **Extractor** | Pulls structured insights out of the transcript: facts, decisions, action items, people, deadlines, open loops. |
-| 4 | **Connector** | Links every new insight to existing knowledge. Builds the living graph that makes the system remember across conversations. |
-| 5 | **Summarizer** | Compresses long conversations into durable, high-signal notes that stay queryable forever. |
-| 6 | **Questioner** | Surfaces clarifying questions and open loops the user might want to close later. |
-| 7 | **Visualizer** | Translates knowledge events into gear animations (new teeth, speed changes, new linkages, glow). This is what makes the clock *feel* alive. |
-| 8 | **Retriever** | Answers natural-language questions against everything the system has ever heard. |
+| 1 | **Listener** | Real-time speech-to-text + speaker awareness |
+| 2 | **Extractor** | Pulls structured insights (facts, decisions, actions, deadlines, open loops) |
+| 3 | **Connector** | Links new insights into the living knowledge graph |
+| 4 | **Summarizer** | Compresses long conversations into durable notes |
+| 5 | **Questioner** | Surfaces clarifying questions and open loops |
+| 6 | **Visualizer** | Turns knowledge events into gear animations (teeth, speed, linkages, glow) |
+| 7 | **Retriever** | Answers natural-language questions against everything heard |
+| 8 | **Archivist** | Long-term storage, indexing, and persistence |
+
+Router is the Sun. The eight planets do the actual work.
 
 ---
 
 ## Current Status
 
-✅ Repository created  
-✅ Full 8-agent architecture  
-✅ Expo + TypeScript mobile scaffold  
-✅ GearClock component (spinning interlocking gears that grow with insights)  
-✅ Router agent  
-✅ **Listener agent + real microphone wiring** (expo-av)  
-✅ Audio service (permissions, start/stop recording)  
+✅ Repository + full architecture  
+✅ Expo mobile scaffold + GearClock (spinning gears that grow teeth)  
+✅ Real microphone wiring (expo-av)  
+✅ Listener agent  
+✅ **Extractor agent** — produces real Insights from speech  
+✅ **Visualizer agent** — converts insights into gear commands  
+✅ Live pipeline: speech → Extractor → Visualizer → teeth appear in real time  
 
-**Next:** Extractor + Visualizer so real insights start adding teeth automatically.
+**Next planets to fully implement:** Connector, Summarizer, Questioner, Retriever, Archivist.
 
 ---
 
-## Tech Stack
+## How the live loop works right now
 
-**Mobile**  
-Expo (React Native) + TypeScript · React Native Reanimated + SVG · expo-av (microphone) · Zustand · expo-sqlite
-
-**AI (local-first goal)**  
-Moonshine / Whisper for STT · Ollama / llama.cpp (Qwen 3.5 or Llama 3.3 8B) · Smart agent routing + token compression
+1. You hit **START LISTENING** → mic opens, gears accelerate + glow  
+2. Simulated (and later real) speech arrives  
+3. **Listener** cleans it  
+4. **Router** decides who wakes  
+5. **Extractor** pulls Insights  
+6. **Visualizer** issues `add_tooth` / `pulse` / `glow` commands  
+7. GearClock reacts → more teeth appear on the gears  
 
 ---
 

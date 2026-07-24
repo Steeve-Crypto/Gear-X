@@ -1,24 +1,62 @@
 /**
- * Gear X — All 8 Agents
+ * Gear X Multi-Agent System
  *
- * 1. Router      → Orchestrator. Decides which agents to wake.
- * 2. Listener    → Real-time STT + speaker diarization.
- * 3. Extractor   → Pulls facts, decisions, action items, entities, deadlines.
- * 4. Connector   → Links new insights to existing knowledge (builds the graph).
- * 5. Summarizer  → Compresses long conversations into durable notes.
- * 6. Questioner  → Surfaces clarifying questions / open loops.
- * 7. Visualizer  → Translates knowledge events into gear animations.
- * 8. Retriever   → Answers natural language questions against the knowledge store.
+ * SOLAR SYSTEM MODEL
+ * -----------------
+ * The Sun (central core):
+ *   • Router  — the only orchestrator. Looks at context and decides which planets wake.
+ *
+ * The 8 Planetary Agents:
+ *   1. Listener     — real-time STT + speaker awareness
+ *   2. Extractor    — pulls structured insights (facts, actions, deadlines…)
+ *   3. Connector    — links new insights into the living knowledge graph
+ *   4. Summarizer   — compresses long conversations into durable notes
+ *   5. Questioner   — surfaces open loops and clarifying questions
+ *   6. Visualizer   — turns knowledge events into gear animations (teeth, speed, glow)
+ *   7. Retriever    — answers natural-language questions against everything heard
+ *   8. Archivist    — long-term storage, indexing, and persistence (coming next)
+ *
+ * Router is the Sun. The other eight are the planets that actually do the work.
  */
 
 export { routerAgent } from './router';
 export { listenerAgent } from './listener';
+export { extractorAgent } from './extractor';
+export { visualizerAgent } from './visualizer';
 export * from './types';
 
-// Placeholder stubs for the remaining agents (implemented next)
-export const extractorAgent = { id: 'extractor' as const, name: 'Extractor', continuous: false };
-export const connectorAgent = { id: 'connector' as const, name: 'Connector', continuous: false };
-export const summarizerAgent = { id: 'summarizer' as const, name: 'Summarizer', continuous: false };
-export const questionerAgent = { id: 'questioner' as const, name: 'Questioner', continuous: false };
-export const visualizerAgent = { id: 'visualizer' as const, name: 'Visualizer', continuous: true };
-export const retrieverAgent = { id: 'retriever' as const, name: 'Retriever', continuous: false };
+// Remaining planetary agents (stubs for now)
+export const connectorAgent = {
+  id: 'connector' as const,
+  name: 'Connector',
+  description: 'Links new insights to existing knowledge and builds the graph.',
+  continuous: false,
+};
+
+export const summarizerAgent = {
+  id: 'summarizer' as const,
+  name: 'Summarizer',
+  description: 'Compresses long conversations into durable, high-signal notes.',
+  continuous: false,
+};
+
+export const questionerAgent = {
+  id: 'questioner' as const,
+  name: 'Questioner',
+  description: 'Surfaces clarifying questions and open loops.',
+  continuous: false,
+};
+
+export const retrieverAgent = {
+  id: 'retriever' as const,
+  name: 'Retriever',
+  description: 'Answers natural language questions against the knowledge store.',
+  continuous: false,
+};
+
+export const archivistAgent = {
+  id: 'archivist' as const,
+  name: 'Archivist',
+  description: 'Long-term storage, indexing, and persistence of insights.',
+  continuous: false,
+};

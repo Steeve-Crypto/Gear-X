@@ -6,7 +6,7 @@
  * The Sun (central core):
  *   • Router  — the only orchestrator.
  *
- * The 8 Planetary Agents:
+ * The 8 Planetary Agents (ALL ONLINE):
  *   1. Listener     — real-time STT + speaker awareness
  *   2. Extractor    — pulls structured insights
  *   3. Weaver       — weaves insights into narrative threads
@@ -27,12 +27,5 @@ export { archivistAgent, restoreKnowledge } from './archivist';
 export { retrieverAgent } from './retriever';
 export { weaverAgent } from './weaver';
 export { summarizerAgent } from './summarizer';
+export { questionerAgent } from './questioner';
 export * from './types';
-
-// Last remaining stub
-export const questionerAgent = {
-  id: 'questioner' as const,
-  name: 'Questioner',
-  description: 'Surfaces clarifying questions and open loops.',
-  continuous: false,
-};

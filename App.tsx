@@ -12,6 +12,7 @@ import {
   retrieverAgent,
   weaverAgent,
   summarizerAgent,
+  questionerAgent,
   restoreKnowledge,
   Insight,
 } from './src/agents';
@@ -26,6 +27,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState<string>('');
   const [lastSummary, setLastSummary] = useState<string>('');
+  const [questions, setQuestions] = useState<string[]>([]);
   const insightsRef = useRef<Insight[]>([]);
 
   useEffect(() => {
@@ -47,7 +49,7 @@ export default function App() {
           setStatusText(`Vault restored · ${stored.length} insights`);
           setLastInsight(stored[stored.length - 1].content);
         } else {
-          setStatusText('Ready · empty vault');
+          setStatusText('Ready · all 8 planets online');
         }
       } catch (e) {
         console.warn('Init error', e);
@@ -70,7 +72,32 @@ export default function App() {
       const s = result.data.summary;
       setLastSummary(`${s.title}\n${s.body}`);
       setStatusText(`Summary ready · ${result.data.source}`);
-      setAnswer(''); // prefer showing summary
+      setAnswer('');
+      setQuestions([]);
+    }
+  };
+
+  const runQuestioner = async () => {
+    if (insightsRef.current.length === 0 && !recentTranscript) {
+      setStatusText('Nothing to question yet');
+      return;
+    }
+
+    setStatusText('Questioner scanning for open loops...');
+    const result = await questionerAgent.run({
+      recentTranscript,
+      currentInsights: insightsRef.current,
+      isListening: false,
+    });
+
+    if (result.success && result.data?.questions?.length) {
+      setQuestions(result.data.questions);
+      setAnswer('');
+      setLastSummary('');
+      setStatusText(`Questioner · ${result.data.count} question(s) · ${result.data.source}`);
+    } else {
+      setQuestions([]);
+      setStatusText(result.data?.message || 'No open questions');
     }
   };
 
@@ -113,9 +140,10 @@ export default function App() {
           );
         }
 
-        // Auto-summarize every 5 insights
+        // Auto Summarizer + Questioner every 5 insights
         if (insightsRef.current.length >= 5 && insightsRef.current.length % 5 === 0) {
           await maybeSummarize();
+          await runQuestioner();
         }
       }
     }
@@ -130,6 +158,7 @@ export default function App() {
     if (!query.trim()) return;
     setStatusText('Retriever searching vault...');
     setAnswer('');
+    setQuestions([]);
 
     const result = await retrieverAgent.run({
       recentTranscript: '',
@@ -140,7 +169,7 @@ export default function App() {
 
     if (result.success && result.data?.answer) {
       setAnswer(result.data.answer);
-      setLastSummary(''); // show answer over summary
+      setLastSummary('');
       setStatusText(
         `Retriever · ${result.data.matchCount || 0} match(es) · ${result.data.source}`
       );
@@ -157,12 +186,12 @@ export default function App() {
       setStatusText(uri ? 'Recording saved · final archive...' : 'Stopped');
       await runPipeline(recentTranscript, false);
 
-      // Final summary pass on stop if we have enough knowledge
       if (insightsRef.current.length >= 2) {
         await maybeSummarize();
+        await runQuestioner();
       }
 
-      setStatusText(`Stopped · ${insightsRef.current.length} insights in vault`);
+      setStatusText(`Stopped · ${insightsRef.current.length} insights · all planets online`);
     } else {
       const started = await startListening();
       if (started) {
@@ -170,6 +199,7 @@ export default function App() {
         setStatusText('Listening...');
         setLastInsight('');
         setAnswer('');
+        setQuestions([]);
 
         setTimeout(async () => {
           const simulated = 'We need to finish the proposal by Friday and decide on the client meeting.';
@@ -216,6 +246,9 @@ export default function App() {
         <Pressable style={styles.secondaryButton} onPress={maybeSummarize}>
           <Text style={styles.secondaryText}>SUMMARIZE</Text>
         </Pressable>
+        <Pressable style={styles.secondaryButton} onPress={runQuestioner}>
+          <Text style={styles.secondaryText}>QUESTION</Text>
+        </Pressable>
       </View>
 
       <View style={styles.queryRow}>
@@ -236,10 +269,18 @@ export default function App() {
       <Text style={styles.status}>{statusText}</Text>
 
       <Text style={styles.metrics}>
-        Insights: {insightCount}  •  Summarizer online
+        Insights: {insightCount}  •  All 8 planets online
       </Text>
 
-      {answer ? (
+      {questions.length > 0 ? (
+        <View style={styles.questionsBox}>
+          {questions.map((q, i) => (
+            <Text key={i} style={styles.questionItem} numberOfLines={2}>
+              {i + 1}. {q}
+            </Text>
+          ))}
+        </View>
+      ) : answer ? (
         <Text style={styles.answer} numberOfLines={6}>
           {answer}
         </Text>
@@ -282,9 +323,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   clockContainer: {
-    width: 280,
-    height: 280,
-    marginBottom: 24,
+    width: 260,
+    height: 260,
+    marginBottom: 20,
   },
   button: {
     backgroundColor: '#1a1a1a',
@@ -305,13 +346,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   row: {
+    flexDirection: 'row',
     marginTop: 12,
+    gap: 10,
   },
   secondaryButton: {
     borderWidth: 1,
     borderColor: '#3a3a2a',
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 4,
   },
   secondaryText: {
@@ -322,7 +365,7 @@ const styles = StyleSheet.create({
   },
   queryRow: {
     flexDirection: 'row',
-    marginTop: 16,
+    marginTop: 14,
     width: '100%',
     maxWidth: 320,
     gap: 8,
@@ -353,26 +396,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   status: {
-    marginTop: 14,
+    marginTop: 12,
     color: '#c08040',
-    fontSize: 13,
-    letterSpacing: 1,
-  },
-  metrics: {
-    marginTop: 8,
-    color: '#5a5040',
     fontSize: 12,
     letterSpacing: 1,
   },
+  metrics: {
+    marginTop: 6,
+    color: '#5a5040',
+    fontSize: 11,
+    letterSpacing: 1,
+  },
   transcript: {
-    marginTop: 16,
+    marginTop: 14,
     color: '#6a6050',
     fontSize: 12,
     textAlign: 'center',
     maxWidth: 300,
   },
   answer: {
-    marginTop: 16,
+    marginTop: 14,
     color: '#c8b890',
     fontSize: 13,
     textAlign: 'center',
@@ -380,11 +423,22 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   summary: {
-    marginTop: 16,
+    marginTop: 14,
     color: '#b0a080',
     fontSize: 12,
     textAlign: 'center',
     maxWidth: 310,
+    lineHeight: 17,
+  },
+  questionsBox: {
+    marginTop: 14,
+    maxWidth: 310,
+    width: '100%',
+  },
+  questionItem: {
+    color: '#d0c090',
+    fontSize: 12,
+    marginBottom: 6,
     lineHeight: 17,
   },
 });

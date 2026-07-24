@@ -11,9 +11,11 @@ import {
   archivistAgent,
   retrieverAgent,
   weaverAgent,
+  summarizerAgent,
   restoreKnowledge,
   Insight,
 } from './src/agents';
+import { loadLatestSummary } from './src/services/database';
 
 export default function App() {
   const [isListening, setIsListening] = useState(false);
@@ -23,6 +25,7 @@ export default function App() {
   const [lastInsight, setLastInsight] = useState<string>('');
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState<string>('');
+  const [lastSummary, setLastSummary] = useState<string>('');
   const insightsRef = useRef<Insight[]>([]);
 
   useEffect(() => {
@@ -34,6 +37,11 @@ export default function App() {
         const stored = await restoreKnowledge();
         insightsRef.current = stored;
         setInsightCount(stored.length);
+
+        const summary = await loadLatestSummary();
+        if (summary) {
+          setLastSummary(`${summary.title}\n${summary.body}`);
+        }
 
         if (stored.length > 0) {
           setStatusText(`Vault restored · ${stored.length} insights`);
@@ -47,6 +55,24 @@ export default function App() {
       }
     })();
   }, []);
+
+  const maybeSummarize = async () => {
+    if (insightsRef.current.length < 2) return;
+
+    setStatusText('Summarizer compressing knowledge...');
+    const result = await summarizerAgent.run({
+      recentTranscript: '',
+      currentInsights: insightsRef.current,
+      isListening: false,
+    });
+
+    if (result.success && result.data?.summary) {
+      const s = result.data.summary;
+      setLastSummary(`${s.title}\n${s.body}`);
+      setStatusText(`Summary ready · ${result.data.source}`);
+      setAnswer(''); // prefer showing summary
+    }
+  };
 
   const runPipeline = async (transcript: string, listening: boolean) => {
     const ctx = {
@@ -72,13 +98,11 @@ export default function App() {
           setStatusText(`+${newInsights.length} insight(s) extracted`);
         }
 
-        // Weaver — form threads from the growing knowledge
         await weaverAgent.run({
           ...ctx,
           currentInsights: insightsRef.current,
         });
 
-        // Archivist — persist
         const archiveResult = await archivistAgent.run({
           ...ctx,
           currentInsights: newInsights,
@@ -87,6 +111,11 @@ export default function App() {
           setStatusText(
             `+${newInsights.length} saved · vault: ${archiveResult.data?.totalStored ?? insightCount}`
           );
+        }
+
+        // Auto-summarize every 5 insights
+        if (insightsRef.current.length >= 5 && insightsRef.current.length % 5 === 0) {
+          await maybeSummarize();
         }
       }
     }
@@ -111,6 +140,7 @@ export default function App() {
 
     if (result.success && result.data?.answer) {
       setAnswer(result.data.answer);
+      setLastSummary(''); // show answer over summary
       setStatusText(
         `Retriever · ${result.data.matchCount || 0} match(es) · ${result.data.source}`
       );
@@ -126,6 +156,12 @@ export default function App() {
       setIsListening(false);
       setStatusText(uri ? 'Recording saved · final archive...' : 'Stopped');
       await runPipeline(recentTranscript, false);
+
+      // Final summary pass on stop if we have enough knowledge
+      if (insightsRef.current.length >= 2) {
+        await maybeSummarize();
+      }
+
       setStatusText(`Stopped · ${insightsRef.current.length} insights in vault`);
     } else {
       const started = await startListening();
@@ -176,7 +212,12 @@ export default function App() {
         </Text>
       </Pressable>
 
-      {/* Retriever query bar */}
+      <View style={styles.row}>
+        <Pressable style={styles.secondaryButton} onPress={maybeSummarize}>
+          <Text style={styles.secondaryText}>SUMMARIZE</Text>
+        </Pressable>
+      </View>
+
       <View style={styles.queryRow}>
         <TextInput
           style={styles.input}
@@ -195,12 +236,16 @@ export default function App() {
       <Text style={styles.status}>{statusText}</Text>
 
       <Text style={styles.metrics}>
-        Insights: {insightCount}  •  SQLite vault + Retriever
+        Insights: {insightCount}  •  Summarizer online
       </Text>
 
       {answer ? (
         <Text style={styles.answer} numberOfLines={6}>
           {answer}
+        </Text>
+      ) : lastSummary ? (
+        <Text style={styles.summary} numberOfLines={7}>
+          {lastSummary}
         </Text>
       ) : lastInsight ? (
         <Text style={styles.transcript} numberOfLines={3}>
@@ -233,13 +278,13 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#8a8070',
-    marginBottom: 32,
+    marginBottom: 28,
     letterSpacing: 1,
   },
   clockContainer: {
-    width: 300,
-    height: 300,
-    marginBottom: 28,
+    width: 280,
+    height: 280,
+    marginBottom: 24,
   },
   button: {
     backgroundColor: '#1a1a1a',
@@ -259,9 +304,25 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 13,
   },
+  row: {
+    marginTop: 12,
+  },
+  secondaryButton: {
+    borderWidth: 1,
+    borderColor: '#3a3a2a',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 4,
+  },
+  secondaryText: {
+    color: '#a09070',
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    fontSize: 11,
+  },
   queryRow: {
     flexDirection: 'row',
-    marginTop: 20,
+    marginTop: 16,
     width: '100%',
     maxWidth: 320,
     gap: 8,
@@ -317,5 +378,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 310,
     lineHeight: 18,
+  },
+  summary: {
+    marginTop: 16,
+    color: '#b0a080',
+    fontSize: 12,
+    textAlign: 'center',
+    maxWidth: 310,
+    lineHeight: 17,
   },
 });

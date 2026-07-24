@@ -30,11 +30,13 @@ export const routerAgent: Agent = {
       activeAgents.push('retriever');
     }
 
-    if (ctx.currentInsights.length > 0 && ctx.currentInsights.length % 5 === 0) {
+    // Every 5 insights (or more) → Summarizer + Questioner
+    if (ctx.currentInsights.length >= 5 && ctx.currentInsights.length % 5 === 0) {
       activeAgents.push('summarizer');
       activeAgents.push('questioner');
     }
 
+    // Always archive when we have knowledge
     if (ctx.currentInsights.length > 0) {
       activeAgents.push('archivist');
     }

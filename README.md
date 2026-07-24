@@ -2,7 +2,7 @@
 
 **A living mechanical clock-planet that listens, thinks, and evolves.**
 
-Speak → agents extract insight → SQLite remembers forever → you can ask the vault anything.
+Speak → agents extract insight → SQLite remembers → Summarizer compresses → you can ask the vault anything.
 
 ---
 
@@ -17,8 +17,8 @@ Speak → agents extract insight → SQLite remembers forever → you can ask th
 |---|-------|------|
 | 1 | **Listener** | Real-time STT + speaker awareness |
 | 2 | **Extractor** | Structured insights (local LLM + rules) |
-| 3 | **Weaver** | Weaves insights into narrative threads *(replaced old Connector)* |
-| 4 | **Summarizer** | Durable conversation notes |
+| 3 | **Weaver** | Narrative threads from insights |
+| 4 | **Summarizer** | Durable high-signal notes *(now live)* |
 | 5 | **Questioner** | Open loops & clarifying questions |
 | 6 | **Visualizer** | Clock-planet animations |
 | 7 | **Retriever** | Natural-language Q&A against the vault |
@@ -26,19 +26,14 @@ Speak → agents extract insight → SQLite remembers forever → you can ask th
 
 ---
 
-## Retriever (now live)
+## Summarizer (now live)
 
-- Search bar in the UI: type a question → hit **ASK**
-- Pulls matching insights from SQLite
-- Optionally synthesizes a clean answer with local Ollama
-- Falls back to a readable list of matches if the LLM is offline
-
----
-
-## Weaver (new planet)
-
-Replaces the old Connector.  
-Instead of just linking IDs, it groups insights into thematic and chronological **threads** the system can reason over later.
+- Compresses the current insight set into a titled, durable note
+- Prefers local Ollama; falls back to structured rule-based summary
+- Saved in SQLite `summaries` table
+- Auto-runs every 5 insights and when you stop listening
+- Manual **SUMMARIZE** button in the UI
+- Latest summary restored on app launch
 
 ---
 
@@ -49,10 +44,11 @@ Instead of just linking IDs, it groups insights into thematic and chronological 
 ✅ Extractor (LLM + rules)  
 ✅ Visualizer  
 ✅ Archivist + SQLite  
-✅ **Retriever** (ask the vault)  
-✅ **Weaver** (narrative threads)  
+✅ Retriever  
+✅ Weaver  
+✅ **Summarizer**  
 
-**Still stubs:** Summarizer, Questioner
+**Last stub:** Questioner
 
 ---
 

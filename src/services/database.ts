@@ -1,6 +1,6 @@
 /**
- * Gear X — SQLite Database Service (Archivist + Retriever backend)
- * Uses expo-sqlite for local, offline-first persistence.
+ * Gear X — SQLite Database Service
+ * Archivist + Retriever + Summarizer backend
  */
 
 import * as SQLite from 'expo-sqlite';
@@ -36,9 +36,20 @@ async function initSchema(database: SQLite.SQLiteDatabase) {
       timestamp INTEGER NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS summaries (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      insight_ids TEXT DEFAULT '[]',
+      insight_count INTEGER NOT NULL,
+      source TEXT DEFAULT 'rules',
+      created_at INTEGER NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_insights_created ON insights(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_insights_type ON insights(type);
     CREATE INDEX IF NOT EXISTS idx_events_ts ON knowledge_events(timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_summaries_created ON summaries(created_at DESC);
   `);
 }
 
@@ -145,6 +156,81 @@ export async function getInsightCount(): Promise<number> {
   return result?.count ?? 0;
 }
 
+export interface SummaryRecord {
+  id: string;
+  title: string;
+  body: string;
+  insightIds: string[];
+  insightCount: number;
+  source: 'llm' | 'rules';
+  createdAt: number;
+}
+
+export async function saveSummary(summary: SummaryRecord): Promise<void> {
+  const database = await getDb();
+  await database.runAsync(
+    `INSERT OR REPLACE INTO summaries
+     (id, title, body, insight_ids, insight_count, source, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      summary.id,
+      summary.title,
+      summary.body,
+      JSON.stringify(summary.insightIds),
+      summary.insightCount,
+      summary.source,
+      summary.createdAt,
+    ]
+  );
+}
+
+export async function loadLatestSummary(): Promise<SummaryRecord | null> {
+  const database = await getDb();
+  const row = await database.getFirstAsync<{
+    id: string;
+    title: string;
+    body: string;
+    insight_ids: string;
+    insight_count: number;
+    source: string;
+    created_at: number;
+  }>('SELECT * FROM summaries ORDER BY created_at DESC LIMIT 1');
+
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    insightIds: JSON.parse(row.insight_ids || '[]'),
+    insightCount: row.insight_count,
+    source: (row.source as 'llm' | 'rules') || 'rules',
+    createdAt: row.created_at,
+  };
+}
+
+export async function loadAllSummaries(): Promise<SummaryRecord[]> {
+  const database = await getDb();
+  const rows = await database.getAllAsync<{
+    id: string;
+    title: string;
+    body: string;
+    insight_ids: string;
+    insight_count: number;
+    source: string;
+    created_at: number;
+  }>('SELECT * FROM summaries ORDER BY created_at DESC');
+
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    body: r.body,
+    insightIds: JSON.parse(r.insight_ids || '[]'),
+    insightCount: r.insight_count,
+    source: (r.source as 'llm' | 'rules') || 'rules',
+    createdAt: r.created_at,
+  }));
+}
+
 export async function logEvent(type: string, payload: any): Promise<void> {
   const database = await getDb();
   await database.runAsync(
@@ -155,5 +241,7 @@ export async function logEvent(type: string, payload: any): Promise<void> {
 
 export async function clearAllData(): Promise<void> {
   const database = await getDb();
-  await database.execAsync('DELETE FROM insights; DELETE FROM knowledge_events;');
+  await database.execAsync(
+    'DELETE FROM insights; DELETE FROM knowledge_events; DELETE FROM summaries;'
+  );
 }

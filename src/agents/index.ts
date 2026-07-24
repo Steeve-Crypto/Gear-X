@@ -9,10 +9,10 @@
  * The 8 Planetary Agents:
  *   1. Listener     — real-time STT + speaker awareness
  *   2. Extractor    — pulls structured insights
- *   3. Weaver       — weaves insights into narrative threads (replaces old Connector)
- *   4. Summarizer   — compresses long conversations into durable notes
+ *   3. Weaver       — weaves insights into narrative threads
+ *   4. Summarizer   — compresses insight sets into durable notes
  *   5. Questioner   — surfaces open loops and clarifying questions
- *   6. Visualizer   — clock-planet animations (orbits, teeth, rings)
+ *   6. Visualizer   — clock-planet animations
  *   7. Retriever    — answers natural-language questions against the vault
  *   8. Archivist    — SQLite long-term storage & restore
  *
@@ -26,16 +26,10 @@ export { visualizerAgent } from './visualizer';
 export { archivistAgent, restoreKnowledge } from './archivist';
 export { retrieverAgent } from './retriever';
 export { weaverAgent } from './weaver';
+export { summarizerAgent } from './summarizer';
 export * from './types';
 
-// Remaining stubs
-export const summarizerAgent = {
-  id: 'summarizer' as const,
-  name: 'Summarizer',
-  description: 'Compresses long conversations into durable, high-signal notes.',
-  continuous: false,
-};
-
+// Last remaining stub
 export const questionerAgent = {
   id: 'questioner' as const,
   name: 'Questioner',

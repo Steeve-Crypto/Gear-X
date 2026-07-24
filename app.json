@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Gear X",
+    "slug": "gear-x",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.gearx.app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Gear X needs microphone access to listen to conversations and build your living knowledge clock."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "package": "com.gearx.app",
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow Gear X to access your microphone so the gears can listen and remember."
+        }
+      ]
+    ],
+    "scheme": "gearx"
+  }
+}

@@ -40,9 +40,9 @@ The spinning gear visualization is driven live by the **Visualizer** agent.
 
 ### Mobile Frontend
 - **Expo (React Native)** + TypeScript
-- **React Native Reanimated** + **Skia** or SVG for the gear system
-- **Expo AV** / react-native-live-audio-stream for microphone
-- **Zustand** or Jotai for state
+- **React Native Reanimated** + **SVG** for the gear system
+- **Expo AV** for microphone
+- **Zustand** for state
 - **SQLite** (expo-sqlite) for local knowledge store
 
 ### AI Layer (Local-first)
@@ -68,9 +68,17 @@ The spinning gear visualization is driven live by the **Visualizer** agent.
 
 ## Current Status
 
-Repository just created. Architecture locked. Building the Expo scaffold and the first spinning gear next.
+✅ Repository created  
+✅ Full architecture + 8-agent design locked  
+✅ Expo + TypeScript scaffold  
+✅ GearClock component (spinning interlocking gears that grow teeth with insights)  
+✅ Router agent implemented  
+
+**Next up:** Wire real microphone → Listener agent → Extractor → live gear updates.
 
 ---
 
 **Built by a student who ships.**  
 Gear X — the machine that remembers for you.
+
+Repo: https://github.com/Steeve-Crypto/Gear-X

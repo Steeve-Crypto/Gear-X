@@ -1,6 +1,10 @@
 import { MockTranscriptionProvider } from '../src/infrastructure/transcription/providers';
 import { sessionRepository } from '../src/repositories/sessionRepository';
-import { startCaptureSession, stopAndProcessSession } from '../src/services/captureSession';
+import {
+  setCaptureSessionStatus,
+  startCaptureSession,
+  stopAndProcessSession,
+} from '../src/services/captureSession';
 
 jest.mock('../src/services/audio', () => ({
   startListening: jest.fn().mockResolvedValue(true),
@@ -40,6 +44,27 @@ const transcription = {
 };
 
 describe('capture session pipeline', () => {
+  test('persists pause and resume state transitions', async () => {
+    const session = await startCaptureSession({
+      transcriptionProvider: 'mock-test',
+      inferenceProvider: 'mock',
+      processingMode: 'local',
+    });
+    const paused = await setCaptureSessionStatus(session, 'paused');
+    const resumed = await setCaptureSessionStatus(paused, 'recording');
+
+    expect(paused.status).toBe('paused');
+    expect(resumed.status).toBe('recording');
+    expect(sessionRepository.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ id: session.id, status: 'paused' }),
+    );
+    expect(sessionRepository.update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ id: session.id, status: 'recording' }),
+    );
+  });
+
   test('persists recording metadata, transcript, completion, and cleanup', async () => {
     const session = await startCaptureSession({
       transcriptionProvider: 'mock-test',

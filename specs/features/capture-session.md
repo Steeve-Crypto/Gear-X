@@ -10,7 +10,7 @@ I can revisit a session with its transcript, insights, summary, questions, threa
 ## Functional requirements
 Unique ID, timestamps, duration, optional audio URI, status, provider/mode fields, cascade deletion, recovery state.
 ## Technical requirements
-Repository transactions and explicit state transitions; recording and transcription are separate.
+Repository transactions and explicit state transitions; recording, paused, resumed, processing, complete, and failed states are persisted rather than held only in UI memory; recording and transcription are separate.
 ## Failure states
 Missing audio, corrupt record, interruption, partial processing, and database error.
 ## Privacy implications

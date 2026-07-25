@@ -40,6 +40,18 @@ export async function startCaptureSession(input: {
   return session;
 }
 
+export async function setCaptureSessionStatus(
+  session: CaptureSession,
+  status: 'recording' | 'paused',
+): Promise<CaptureSession> {
+  if (!['recording', 'paused'].includes(session.status)) {
+    throw new GearXError('CORRUPT_SESSION', 'Only an active recording can be paused or resumed.');
+  }
+  const updated = { ...session, status, updatedAt: Date.now() };
+  await sessionRepository.update(updated);
+  return updated;
+}
+
 export async function stopAndProcessSession(input: {
   session: CaptureSession;
   provider: TranscriptionProvider;

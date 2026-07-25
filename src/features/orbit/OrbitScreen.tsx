@@ -10,8 +10,13 @@ import { useSettingsStore } from '../../state/settingsStore';
 import { useSessionStore } from '../../state/sessionStore';
 import { getInsightCount } from '../../services/database';
 import { pauseListening, resumeListening } from '../../services/audio';
-import { startCaptureSession, stopAndProcessSession } from '../../services/captureSession';
+import {
+  setCaptureSessionStatus,
+  startCaptureSession,
+  stopAndProcessSession,
+} from '../../services/captureSession';
 import { createTranscriptionProvider } from '../../services/providerFactory';
+import { sessionRepository } from '../../repositories/sessionRepository';
 
 export default function OrbitScreen() {
   const settings = useSettingsStore();
@@ -63,8 +68,15 @@ export default function OrbitScreen() {
       setLastError('The recording state could not be changed.');
       return;
     }
-    setCurrent({ ...current, status: pausing ? 'paused' : 'recording', updatedAt: Date.now() });
-    setActiveAgents(pausing ? [] : ['listener']);
+    try {
+      const updated = await setCaptureSessionStatus(current, pausing ? 'paused' : 'recording');
+      setCurrent(updated);
+      setActiveAgents(pausing ? [] : ['listener']);
+    } catch (error) {
+      if (pausing) await resumeListening();
+      else await pauseListening();
+      setLastError(userErrorMessage(error));
+    }
   };
 
   const stop = async () => {
@@ -92,7 +104,12 @@ export default function OrbitScreen() {
         setLastError('The session completed, but its local recording could not be deleted.');
       }
     } catch (error) {
-      setCurrent({ ...current, status: 'failed', endedAt: Date.now(), updatedAt: Date.now() });
+      setCurrent(await sessionRepository.get(current.id) ?? {
+        ...current,
+        status: 'failed',
+        endedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
       setLastError(userErrorMessage(error));
       Alert.alert('Session saved', userErrorMessage(error));
     } finally {

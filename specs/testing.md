@@ -12,7 +12,7 @@ Fake snapshots, mocked tests that assert nothing, or claims about unrun platform
 ## Functional requirements
 Cover Router, agents, parsing, ranking, validation, repositories, migrations, state selectors, privacy, session pipeline, deletion, export, and primary UI states.
 ## Technical requirements
-Deterministic clocks/IDs/providers; isolated databases; no network in unit tests; validation runs typecheck, tests, and lint.
+Deterministic clocks/IDs/providers; isolated SQL.js databases; Jest Expo native mocks; synthetic fixtures; no network in unit tests; validation runs typecheck, Node tests, React Native tests, and lint.
 ## Failure states
 Flaky timing, leaked database state, network-dependent unit tests, and skipped critical privacy tests block release.
 ## Privacy implications
@@ -22,6 +22,6 @@ All automated checks pass; manual matrix reports actual status; failures identif
 ## Dependencies
 All implementation specs.
 ## Open implementation decisions
-Maestro versus Detox for native end-to-end automation.
+Maestro versus Detox remains the decision for the physical-device matrix; Jest Expo and React Native Testing Library cover the current component layer.
 ## Verification method
 `npm run validate` and documented device runs.

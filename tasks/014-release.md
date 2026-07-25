@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-In progress: install, validation, Expo config, and Android export pass; physical Android/iOS checks and production audit remain.
+In progress: clean install, validation, Expo config, and Android export have passed. The 2026-07-25 production audit completed with 31 transitive findings (29 high, 2 moderate) whose offered fixes require an Expo/React Native major upgrade. Physical Android/iOS checks and that coordinated upgrade remain release blockers.

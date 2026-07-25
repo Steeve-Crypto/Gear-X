@@ -14,4 +14,4 @@ Queries, pagination, filters, mutations, empty/error states.
 ## Rollback considerations
 UI rollback does not alter schema or records.
 ## Completion status
-Implementation complete: stable pagination, highlighting, all specified filters, source context, plaintext export, and bulk archive/delete are implemented. Verification is tracked by task 012.
+Complete: stable pagination, highlighting, all specified filters, source context, plaintext export, bulk archive/delete, accessibility state, repository failures, and UI regression coverage are implemented.

@@ -14,4 +14,4 @@ Migration and cascade integration tests.
 ## Rollback considerations
 Transactions roll back failed migration; schema migrations are forward-only.
 ## Completion status
-In progress: normalized forward migration and legacy-column preservation implemented; device migration tests remain.
+Complete for automated scope: normalized transactional migration, legacy-column preservation, required indexes, uniqueness, and cascade behavior are covered by in-memory SQLite integration tests. Restart verification on Android/iOS remains in task 014.

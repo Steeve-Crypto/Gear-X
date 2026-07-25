@@ -1,19 +1,10 @@
-import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { colors } from '../src/design/tokens';
-import { settingsRepository } from '../src/repositories/settingsRepository';
-import { useSettingsStore } from '../src/state/settingsStore';
-import { knowledgeRepository } from '../src/repositories/knowledgeRepository';
+import { useAppBootstrap } from '../src/features/app/useAppBootstrap';
 
 export default function RootLayout() {
-  const hydrate = useSettingsStore((state) => state.hydrate);
-  useEffect(() => {
-    settingsRepository.load().then(async (settings) => {
-      await knowledgeRepository.applyRetention(settings.dataRetentionDays);
-      hydrate(settings);
-    }).catch(() => hydrate({}));
-  }, [hydrate]);
+  useAppBootstrap();
 
   return (
     <>

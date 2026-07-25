@@ -46,6 +46,20 @@ test('all primary Expo Router routes exist', async () => {
   await Promise.all(routes.map((route) => access(resolve(root, route))));
 });
 
+test('route modules compose features without repository or provider logic', async () => {
+  const routeFiles = [];
+  async function walkRoutes(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = resolve(directory, entry.name);
+      if (entry.isDirectory()) await walkRoutes(path);
+      else if (entry.name.endsWith('.tsx')) routeFiles.push(path);
+    }
+  }
+  await walkRoutes(resolve(root, 'app'));
+  const source = (await Promise.all(routeFiles.map((file) => readFile(file, 'utf8')))).join('\n');
+  assert.doesNotMatch(source, /src\/repositories|src\/infrastructure|src\/services\/(database|captureSession|audio)/);
+});
+
 test('production source contains no simulated transcript injection or committed secrets', async () => {
   const files = [];
   async function walk(directory) {

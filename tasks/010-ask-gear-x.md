@@ -14,4 +14,4 @@ Ranking, empty query, no evidence, fallback, consent.
 ## Rollback considerations
 Disable synthesis while preserving deterministic retrieval.
 ## Completion status
-Implementation complete: ranked evidence, synthesis separation, no-evidence protection, confidence/quality, insight/session links, and thread-bounded queries are implemented. Verification is tracked by task 012.
+Complete: ranked evidence, synthesis separation, no-evidence protection, confidence/quality, insight/session links, thread-bounded queries, and deterministic retrieval tests are implemented.

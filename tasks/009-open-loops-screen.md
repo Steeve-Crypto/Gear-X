@@ -14,4 +14,4 @@ Classification, filters, transitions, missing sources.
 ## Rollback considerations
 Keep questions even if reminder export is unavailable.
 ## Completion status
-Implementation complete: nine categories, search/filter, source navigation, priority/due-date editing, reminder readiness, and noted resolve/dismiss transitions are implemented. Verification is tracked by task 012.
+Complete: nine categories, search/filter, source navigation, priority/due-date editing, reminder readiness, noted resolve/dismiss transitions, and category validation are implemented.

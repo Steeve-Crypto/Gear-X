@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
-import { ActionButton, Field, Panel, Screen, commonStyles } from '../../src/components/primitives';
+import { Text, View } from 'react-native';
+import { ActionButton, ChoiceChip, Field, Panel, Screen, commonStyles } from '../../src/components/primitives';
 import { OllamaProvider } from '../../src/infrastructure/inference/ollama';
 import { settingsRepository } from '../../src/repositories/settingsRepository';
 import { useSettingsStore } from '../../src/state/settingsStore';
@@ -29,12 +29,39 @@ export default function InferenceScreen() {
   return (
     <Screen title="Inference" eyebrow="LOCAL-FIRST PROVIDERS">
       <Panel>
+        <Text style={commonStyles.label}>Processing mode</Text>
+        <View style={commonStyles.row}>
+          {(['local', 'remote'] as const).map((processingMode) => (
+            <ChoiceChip key={processingMode} label={processingMode}
+              selected={settings.processingMode === processingMode}
+              onPress={async () => {
+                settings.update({ processingMode });
+                await settingsRepository.save({ processingMode });
+              }} />
+          ))}
+        </View>
         <Text style={commonStyles.label}>Ollama endpoint</Text>
         <Field value={endpoint} onChangeText={setEndpoint} autoCapitalize="none" autoCorrect={false} />
         <Text style={commonStyles.label}>Model</Text>
         <Field value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} />
         <ActionButton label="Save local provider" onPress={save} />
         <ActionButton label="Test connection" onPress={test} />
+      </Panel>
+      <Panel>
+        <Text style={commonStyles.label}>Voice provider</Text>
+        <View style={commonStyles.row}>
+          {(['none', 'grok-voice'] as const).map((voiceProvider) => (
+            <ChoiceChip key={voiceProvider} label={voiceProvider}
+              selected={settings.voiceProvider === voiceProvider}
+              onPress={async () => {
+                settings.update({ voiceProvider });
+                await settingsRepository.save({ voiceProvider });
+              }} />
+          ))}
+        </View>
+        <Text style={commonStyles.body}>
+          Voice is disabled by default. Grok Voice requires remote-processing consent and a short-lived backend token; no provider secret is stored in the app.
+        </Text>
       </Panel>
       <Panel>
         <Text style={commonStyles.label}>Transcription provider</Text>

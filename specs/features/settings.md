@@ -8,7 +8,7 @@ Storing provider API secrets in the app.
 ## User stories
 I can choose local mode, reduce motion, test Ollama, and manage my data.
 ## Functional requirements
-Persist preferences; consent confirmation; retention; endpoint/model; provider selection; health and destructive controls.
+Persist appearance/automation/processing/voice/transcription preferences; consent confirmation; retention; endpoint/model; provider selection; health, diagnostics export, and destructive controls.
 ## Technical requirements
 Settings repository with validated keys and typed values; provider tests have timeouts.
 ## Failure states

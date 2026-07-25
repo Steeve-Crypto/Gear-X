@@ -14,4 +14,4 @@ Mock, cancellation, unavailable, consent, invalid result.
 ## Rollback considerations
 Captured recording/session remains recoverable after provider failure.
 ## Completion status
-In progress: device boundary, deterministic mock, local Whisper server, secure backend, cancellation, and consent paths implemented; native provider remains.
+Complete for the documented beta boundary: production never fabricates transcripts; deterministic mock, unavailable device boundary, consent-gated local-network Whisper, secure backend adapter, cancellation, validation, and recoverable failure paths are implemented. Native on-device STT remains a disclosed post-beta integration.

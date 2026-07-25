@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
 /**
  * Audio Service for Gear X
@@ -83,4 +84,13 @@ export async function resumeListening(): Promise<boolean> {
 
 export function isCurrentlyRecording(): boolean {
   return recording !== null;
+}
+
+export async function deleteRecording(uri: string): Promise<boolean> {
+  try {
+    await FileSystem.deleteAsync(uri, { idempotent: true });
+    return true;
+  } catch {
+    return false;
+  }
 }

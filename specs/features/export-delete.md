@@ -10,7 +10,7 @@ I can export my knowledge and permanently remove selected or all local data.
 ## Functional requirements
 Versioned export schema, source relationships, confirmation, transactional cascade, and audio cleanup where possible.
 ## Technical requirements
-Repository transaction builds export; sharing is initiated only by user; deletion reports partial file cleanup.
+Repository transaction builds export; a plaintext warning precedes an explicit OS share sheet; the temporary share file is deleted afterward; deletion reports partial file cleanup.
 ## Failure states
 Share unavailable, serialization error, database rollback, missing audio, file deletion failure.
 ## Privacy implications
@@ -20,6 +20,6 @@ Exports are complete/readable; cascades preserve referential integrity; cancel i
 ## Dependencies
 All repositories, file/share adapter, privacy.
 ## Open implementation decisions
-Encrypted archive export.
+Encrypted archive export remains post-beta; beta export is explicitly labelled plaintext.
 ## Verification method
 Export schema and deletion-cascade integration tests plus device share check.

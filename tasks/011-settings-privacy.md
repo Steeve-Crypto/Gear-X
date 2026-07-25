@@ -14,4 +14,4 @@ Persistence, consent, retention, health, export/delete confirmation.
 ## Rollback considerations
 Use defaults for unknown settings while retaining stored values.
 ## Completion status
-In progress: persisted controls, consent, retention, export/delete, provider health, and diagnostics implemented; secure share adapter remains.
+Implementation complete: persisted controls, consent, retention, explicit plaintext file sharing, export/delete, provider health, storage estimate, and diagnostics export are implemented. Verification is tracked by task 012.

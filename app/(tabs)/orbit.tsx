@@ -6,12 +6,12 @@ import { GearClock } from '../../src/components/GearClock';
 import { ActionButton, Panel, Screen, commonStyles } from '../../src/components/primitives';
 import { colors, spacing } from '../../src/design/tokens';
 import { userErrorMessage } from '../../src/domain/errors';
-import { DeviceTranscriptionAdapter, LocalWhisperServerProvider } from '../../src/infrastructure/transcription/providers';
 import { useSettingsStore } from '../../src/state/settingsStore';
 import { useSessionStore } from '../../src/state/sessionStore';
 import { getInsightCount } from '../../src/services/database';
 import { pauseListening, resumeListening } from '../../src/services/audio';
 import { startCaptureSession, stopAndProcessSession } from '../../src/services/captureSession';
+import { createTranscriptionProvider } from '../../src/services/providerFactory';
 
 export default function OrbitScreen() {
   const settings = useSettingsStore();
@@ -73,17 +73,14 @@ export default function OrbitScreen() {
     setCurrent({ ...current, status: 'processing', updatedAt: Date.now() });
     setActiveAgents(['listener']);
     try {
-      const provider = settings.transcriptionProvider === 'local-whisper-server'
-        ? new LocalWhisperServerProvider(
-            settings.transcriptionEndpoint,
-            () => settings.remoteProcessingConsent,
-          )
-        : new DeviceTranscriptionAdapter();
+      const provider = createTranscriptionProvider(settings);
       const result = await stopAndProcessSession({
         session: current,
         provider,
         retainRecording: settings.retainRecordings,
         currentInsights: insights.current,
+        autoSummarize: settings.autoSummarize,
+        autoQuestion: settings.autoQuestion,
         onAgents: (ids) => setActiveAgents(ids as AgentId[]),
       });
       insights.current = [...insights.current, ...result.newInsights];
@@ -91,6 +88,9 @@ export default function OrbitScreen() {
       setTranscript(result.transcript);
       setLastInsight(result.newInsights[0]?.content ?? '');
       setCurrent(result.session);
+      if (result.recordingCleanupFailed) {
+        setLastError('The session completed, but its local recording could not be deleted.');
+      }
     } catch (error) {
       setCurrent({ ...current, status: 'failed', endedAt: Date.now(), updatedAt: Date.now() });
       setLastError(userErrorMessage(error));

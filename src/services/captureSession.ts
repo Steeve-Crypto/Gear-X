@@ -8,7 +8,7 @@ import { TranscriptionProvider } from '../infrastructure/transcription/types';
 import { sessionRepository } from '../repositories/sessionRepository';
 import { createId } from '../utils/id';
 import { runRepository } from '../repositories/runRepository';
-import { startListening, stopListening } from './audio';
+import { deleteRecording, startListening, stopListening } from './audio';
 
 const runtime = new AgentRuntime(agentRegistry);
 
@@ -47,7 +47,9 @@ export async function stopAndProcessSession(input: {
   currentInsights: Insight[];
   signal?: AbortSignal;
   onAgents?: (ids: string[]) => void;
-}): Promise<{ session: CaptureSession; transcript: string; newInsights: Insight[] }> {
+  autoSummarize?: boolean;
+  autoQuestion?: boolean;
+}): Promise<ProcessedSession> {
   const endedAt = Date.now();
   const uri = await stopListening();
   if (!uri) throw new GearXError('RECORDING_FAILED', 'No recording file was produced.');
@@ -75,7 +77,9 @@ export async function retryCapturedSession(input: {
   currentInsights: Insight[];
   signal?: AbortSignal;
   onAgents?: (ids: string[]) => void;
-}): Promise<{ session: CaptureSession; transcript: string; newInsights: Insight[] }> {
+  autoSummarize?: boolean;
+  autoQuestion?: boolean;
+}): Promise<ProcessedSession> {
   const existing = await sessionRepository.get(input.sessionId);
   if (!existing?.audioUri || !['processing', 'failed'].includes(existing.status)) {
     throw new GearXError('SESSION_NOT_RECOVERABLE', 'This session has no recoverable recording.');
@@ -93,7 +97,9 @@ async function processCapturedSession(input: {
   currentInsights: Insight[];
   signal?: AbortSignal;
   onAgents?: (ids: string[]) => void;
-}): Promise<{ session: CaptureSession; transcript: string; newInsights: Insight[] }> {
+  autoSummarize?: boolean;
+  autoQuestion?: boolean;
+}): Promise<ProcessedSession> {
   let session = input.session;
   try {
     if (!(await input.provider.isAvailable())) {
@@ -142,7 +148,10 @@ async function processCapturedSession(input: {
       signal: input.signal,
     };
     const routed = await routerAgent.run(context);
-    const active = routed.data?.activeAgents ?? [];
+    const active = (routed.data?.activeAgents ?? []).filter((id) => (
+      (id !== 'summarizer' || input.autoSummarize !== false)
+      && (id !== 'questioner' || input.autoQuestion !== false)
+    ));
     input.onAgents?.(active);
     const runGroup = `${session.id}:final`;
     const results = await runtime.execute(active, context, {
@@ -157,14 +166,22 @@ async function processCapturedSession(input: {
     const newInsights = results
       .filter((result) => result.agentId === 'extractor')
       .flatMap((result) => (result.data?.insights ?? []) as Insight[]);
+    const recordingDeleted = input.retainRecording
+      ? false
+      : await deleteRecording(input.audioUri);
     session = {
       ...session,
       status: 'complete',
-      audioUri: input.retainRecording ? input.audioUri : null,
+      audioUri: input.retainRecording || !recordingDeleted ? input.audioUri : null,
       updatedAt: Date.now(),
     };
     await sessionRepository.update(session);
-    return { session, transcript: transcription.text, newInsights };
+    return {
+      session,
+      transcript: transcription.text,
+      newInsights,
+      recordingCleanupFailed: !input.retainRecording && !recordingDeleted,
+    };
   } catch (cause) {
     session = { ...session, status: 'failed', updatedAt: Date.now() };
     await sessionRepository.update(session);
@@ -173,4 +190,11 @@ async function processCapturedSession(input: {
   } finally {
     input.onAgents?.([]);
   }
+}
+
+interface ProcessedSession {
+  session: CaptureSession;
+  transcript: string;
+  newInsights: Insight[];
+  recordingCleanupFailed: boolean;
 }

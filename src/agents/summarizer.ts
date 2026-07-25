@@ -90,6 +90,8 @@ No markdown. No extra text.`;
     const summary: SummaryRecord = {
       id: `sum_${now}`,
       sessionId: ctx.sessionId ?? null,
+      threadId: ctx.threadId ?? null,
+      scope: ctx.summaryScope ?? (ctx.threadId ? 'thread' : 'session'),
       title,
       body,
       insightIds: insights.map((i) => i.id),

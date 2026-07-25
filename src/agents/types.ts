@@ -51,6 +51,8 @@ export interface AgentContext {
   isListening: boolean;
   userQuery?: string;
   sessionId?: string;
+  threadId?: string;
+  summaryScope?: 'session' | 'daily' | 'thread';
   signal?: AbortSignal;
   remoteConsent?: boolean;
 }

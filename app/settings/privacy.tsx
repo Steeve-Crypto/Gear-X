@@ -6,17 +6,41 @@ import { clearAllData } from '../../src/services/database';
 import { knowledgeRepository } from '../../src/repositories/knowledgeRepository';
 import { settingsRepository } from '../../src/repositories/settingsRepository';
 import { useSettingsStore } from '../../src/state/settingsStore';
+import { shareJsonExport } from '../../src/services/exportShare';
+import { userErrorMessage } from '../../src/domain/errors';
 
 export default function PrivacyScreen() {
   const settings = useSettingsStore();
   const [exportText, setExportText] = useState('');
+  const [exportData, setExportData] = useState<Record<string, unknown> | null>(null);
   const save = async (patch: Parameters<typeof settings.update>[0]) => {
     settings.update(patch);
     await settingsRepository.save(patch);
   };
   const exportAll = async () => {
     const data = await knowledgeRepository.exportAll();
+    setExportData(data);
     setExportText(JSON.stringify(data, null, 2));
+  };
+  const shareExport = () => {
+    if (!exportData) return;
+    Alert.alert(
+      'Share plaintext export?',
+      'The selected destination will receive readable transcripts and knowledge outside the Gear X app sandbox.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Continue',
+          onPress: async () => {
+            try {
+              await shareJsonExport('gear-x-export', exportData);
+            } catch (error) {
+              Alert.alert('Export not shared', userErrorMessage(error));
+            }
+          },
+        },
+      ],
+    );
   };
   const confirmDelete = () => Alert.alert(
     'Delete all Gear X data?',
@@ -26,6 +50,7 @@ export default function PrivacyScreen() {
       { text: 'Delete all', style: 'destructive', onPress: async () => {
         await clearAllData();
         setExportText('');
+        setExportData(null);
       } },
     ],
   );
@@ -62,6 +87,7 @@ export default function PrivacyScreen() {
       {exportText ? <Panel>
         <Text style={commonStyles.meta}>SELECTABLE JSON EXPORT</Text>
         <Text selectable style={commonStyles.body}>{exportText}</Text>
+        <ActionButton label="Share plaintext export" onPress={shareExport} />
       </Panel> : null}
       <ActionButton label="Delete all data" onPress={confirmDelete} destructive />
     </Screen>

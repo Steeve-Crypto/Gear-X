@@ -16,7 +16,8 @@ export type GearXErrorCode =
   | 'AGENT_FAILED'
   | 'MISSING_AUDIO_FILE'
   | 'NETWORK_UNAVAILABLE'
-  | 'REMOTE_CONSENT_MISSING';
+  | 'REMOTE_CONSENT_MISSING'
+  | 'SHARE_UNAVAILABLE';
 
 export class GearXError extends Error {
   constructor(
@@ -50,6 +51,7 @@ export const userErrorMessage = (error: unknown): string => {
     MISSING_AUDIO_FILE: 'The recording file is no longer available.',
     NETWORK_UNAVAILABLE: 'A configured network provider cannot be reached.',
     REMOTE_CONSENT_MISSING: 'Enable remote-processing consent before using this provider.',
+    SHARE_UNAVAILABLE: 'Sharing is unavailable on this device. The export was not sent.',
   };
   return messages[error.code];
 };

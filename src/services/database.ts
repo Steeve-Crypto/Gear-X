@@ -136,6 +136,7 @@ export interface SummaryRecord {
   id: string;
   sessionId?: string | null;
   threadId?: string | null;
+  scope?: 'session' | 'daily' | 'thread';
   title: string;
   body: string;
   insightIds: string[];
@@ -156,7 +157,7 @@ export async function saveSummary(summary: SummaryRecord): Promise<void> {
       summary.id,
       summary.sessionId ?? null,
       summary.threadId ?? null,
-      summary.threadId ? 'thread' : 'session',
+      summary.scope ?? (summary.threadId ? 'thread' : 'session'),
       summary.title,
       summary.body,
       JSON.stringify(summary.insightIds),
@@ -198,6 +199,9 @@ export async function loadAllSummaries(): Promise<SummaryRecord[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<{
     id: string;
+    session_id: string | null;
+    thread_id: string | null;
+    scope: 'session' | 'daily' | 'thread';
     title: string;
     body: string;
     insight_ids: string;
@@ -208,6 +212,9 @@ export async function loadAllSummaries(): Promise<SummaryRecord[]> {
 
   return rows.map((r) => ({
     id: r.id,
+    sessionId: r.session_id,
+    threadId: r.thread_id,
+    scope: r.scope,
     title: r.title,
     body: r.body,
     insightIds: JSON.parse(r.insight_ids || '[]'),

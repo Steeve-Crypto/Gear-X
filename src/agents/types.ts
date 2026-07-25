@@ -1,3 +1,5 @@
+import type { InferenceProvider } from '../infrastructure/inference/types';
+
 /**
  * Gear X Multi-Agent System Types
  *
@@ -115,4 +117,3 @@ export interface Agent {
   canRun?: (ctx: AgentContext) => boolean;
   run: (ctx: AgentContext) => Promise<AgentResult>;
 }
-import type { InferenceProvider } from '../infrastructure/inference/types';

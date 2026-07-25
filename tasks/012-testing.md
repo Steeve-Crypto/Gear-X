@@ -14,4 +14,4 @@ This task owns the full suite and manual matrix.
 ## Rollback considerations
 Test tooling must not affect production bundles.
 ## Completion status
-Complete for automated scope: 18 Node domain/SQLite/static tests and 15 Jest React Native/provider/runtime/pipeline tests are deterministic and invoked by validation. The physical-device matrix remains a release gate in task 014.
+Complete for automated scope: 18 Node domain/SQLite/static tests and 20 Jest React Native/provider/runtime/pipeline tests are deterministic and invoked by validation. The physical-device matrix remains a release gate in task 014.

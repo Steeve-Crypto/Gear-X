@@ -5,10 +5,10 @@ Date: 2026-07-25
 ## Passed
 
 - `npm install --no-audit --no-fund`: completed.
-- Final lockfile-clean `npm run validate`: passed.
+- Final `npm run validate` after the real 3D conversion: passed.
   - TypeScript strict check: passed.
   - Node domain/SQLite/static suite: 18 passed, 0 failed.
-  - Jest Expo UI/provider/runtime/pipeline suite: 15 passed, 0 failed.
+  - Jest Expo UI/provider/runtime/pipeline suite: 20 passed, 0 failed.
   - Expo ESLint: passed with 0 errors and 0 warnings.
   - 10,000-record Vault benchmark: 100 queries, 6.76 ms average.
 - `expo config --type public`: passed; SDK 53, iOS and Android configuration resolved.
@@ -18,6 +18,11 @@ Date: 2026-07-25
   - Metro bundled 1,338 modules.
   - Hermes Android bundle produced successfully.
   - Temporary export directory removed after verification.
+- Real 3D renderer verification:
+  - React Three Fiber/Expo GL dependency compatibility check passed.
+  - Side-panel WebGL render showed the compound celestial gear body with no renderer errors.
+  - Android Hermes export passed with 1,248 modules and a 6.25 MB bundle.
+  - Gear-profile focused tests passed, 2 of 2.
 - Static production-path check found no simulated transcript injection or committed provider secret pattern.
 
 ## Not run

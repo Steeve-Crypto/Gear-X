@@ -8,7 +8,7 @@ Decorative animation or background recording without platform support.
 ## User stories
 I can start a session, understand what is active, and stop safely.
 ## Functional requirements
-Clock state maps Listener, Extractor, Weaver, Archivist, Questioner, Retriever, Summarizer, and Visualizer; text mirrors status; the clock uses perspective, physical depth, and counter-rotating mechanical layers rather than a flat face.
+Clock state maps Listener, Extractor, Weaver, Archivist, Questioner, Retriever, Summarizer, and Visualizer; text mirrors status; Orbit renders a hardware-accelerated 3D celestial body built from compound, counter-rotating volumetric gears rather than a flat clock face.
 ## Technical requirements
 Orbit consumes session/visualization selectors and capture service; it performs no SQL or provider calls.
 ## Failure states

@@ -10,13 +10,13 @@ import { visualizerAgent } from './visualizer';
 import { weaverAgent } from './weaver';
 
 export const agentRegistry = new Map<AgentId, Agent>([
-  ['router', routerAgent],
-  ['listener', listenerAgent],
-  ['extractor', { ...extractorAgent, dependencies: ['listener'], timeoutMs: 15_000 }],
-  ['weaver', { ...weaverAgent, dependencies: ['extractor'], timeoutMs: 12_000 }],
-  ['summarizer', { ...summarizerAgent, dependencies: ['extractor'], timeoutMs: 15_000 }],
-  ['questioner', { ...questionerAgent, dependencies: ['extractor'], timeoutMs: 15_000 }],
-  ['visualizer', { ...visualizerAgent, timeoutMs: 2_000 }],
-  ['retriever', { ...retrieverAgent, timeoutMs: 15_000 }],
-  ['archivist', { ...archivistAgent, dependencies: ['extractor'], timeoutMs: 8_000 }],
+  ['router', { ...routerAgent, retryLimit: 0, privacy: 'local_only', idempotent: true }],
+  ['listener', { ...listenerAgent, retryLimit: 0, privacy: 'local_only', idempotent: true }],
+  ['extractor', { ...extractorAgent, dependencies: ['listener'], timeoutMs: 15_000, retryLimit: 1, privacy: 'remote_optional', idempotent: true }],
+  ['weaver', { ...weaverAgent, dependencies: ['extractor'], timeoutMs: 12_000, retryLimit: 1, privacy: 'local_only', idempotent: true }],
+  ['summarizer', { ...summarizerAgent, dependencies: ['extractor'], timeoutMs: 15_000, retryLimit: 1, privacy: 'remote_optional', idempotent: true }],
+  ['questioner', { ...questionerAgent, dependencies: ['extractor'], timeoutMs: 15_000, retryLimit: 1, privacy: 'remote_optional', idempotent: true }],
+  ['visualizer', { ...visualizerAgent, timeoutMs: 2_000, retryLimit: 0, privacy: 'local_only', idempotent: true }],
+  ['retriever', { ...retrieverAgent, timeoutMs: 15_000, retryLimit: 1, privacy: 'remote_optional', idempotent: true }],
+  ['archivist', { ...archivistAgent, dependencies: ['extractor'], timeoutMs: 8_000, retryLimit: 1, privacy: 'local_only', idempotent: true }],
 ]);

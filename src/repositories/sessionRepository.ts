@@ -62,6 +62,16 @@ export const sessionRepository = {
     return rows.map(toSession);
   },
 
+  async listRecoverable(): Promise<CaptureSession[]> {
+    const db = await openAppDatabase();
+    const rows = await db.getAllAsync<Record<string, unknown>>(
+      `SELECT * FROM sessions
+       WHERE status IN ('processing', 'failed') AND audio_uri IS NOT NULL
+       ORDER BY updated_at DESC`,
+    );
+    return rows.map(toSession);
+  },
+
   async update(session: CaptureSession): Promise<void> {
     const db = await openAppDatabase();
     await db.runAsync(
@@ -99,6 +109,30 @@ export const sessionRepository = {
         segment.createdAt,
       ],
     );
+  },
+
+  async replaceSegments(sessionId: string, segments: TranscriptSegment[]): Promise<void> {
+    const db = await openAppDatabase();
+    await db.withTransactionAsync(async () => {
+      await db.runAsync('DELETE FROM transcript_segments WHERE session_id = ?', [sessionId]);
+      for (const segment of segments) {
+        await db.runAsync(
+          `INSERT INTO transcript_segments
+           (id, session_id, text, start_ms, end_ms, speaker_label, confidence, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            segment.id,
+            segment.sessionId,
+            segment.text,
+            segment.startMs,
+            segment.endMs,
+            segment.speakerLabel,
+            segment.confidence,
+            segment.createdAt,
+          ],
+        );
+      }
+    });
   },
 
   async segments(sessionId: string): Promise<TranscriptSegment[]> {

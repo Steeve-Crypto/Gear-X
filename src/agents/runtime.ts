@@ -1,4 +1,5 @@
 import { GearXError } from '../domain/errors';
+import { getAttemptLimit } from '../domain/runtimePolicy';
 import { Agent, AgentContext, AgentId, AgentResult } from './types';
 
 export interface RuntimeEvent {
@@ -7,12 +8,13 @@ export interface RuntimeEvent {
   at: number;
   durationMs?: number;
   error?: string;
+  attempt: number;
 }
 
 export interface RuntimeOptions {
   signal?: AbortSignal;
   idempotencyKey?: string;
-  onEvent?: (event: RuntimeEvent) => void;
+  onEvent?: (event: RuntimeEvent) => void | Promise<void>;
 }
 
 export class AgentRuntime {
@@ -31,7 +33,7 @@ export class AgentRuntime {
       if (!agent || (agent.canRun && !agent.canRun(pipelineContext))) continue;
       const key = options.idempotencyKey ? `${options.idempotencyKey}:${id}` : '';
       if (key && this.completedKeys.has(key)) continue;
-      const result = await this.runOne(agent, pipelineContext, options);
+      const result = await this.runWithRetries(agent, pipelineContext, options);
       results.push(result);
       if (result.success && id === 'extractor') {
         const extracted = (result.data?.insights ?? []) as AgentContext['currentInsights'];
@@ -43,42 +45,80 @@ export class AgentRuntime {
     return results;
   }
 
-  private async runOne(agent: Agent, context: AgentContext, options: RuntimeOptions) {
+  private async runWithRetries(
+    agent: Agent,
+    context: AgentContext,
+    options: RuntimeOptions,
+  ): Promise<AgentResult> {
+    const attemptLimit = getAttemptLimit(agent.retryLimit);
+    let result: AgentResult = {
+      agentId: agent.id,
+      success: false,
+      error: `${agent.name} did not run.`,
+    };
+    for (let attempt = 1; attempt <= attemptLimit; attempt += 1) {
+      result = await this.runOne(agent, context, options, attempt);
+      if (result.success || options.signal?.aborted) return result;
+    }
+    return result;
+  }
+
+  private async runOne(
+    agent: Agent,
+    context: AgentContext,
+    options: RuntimeOptions,
+    attempt: number,
+  ): Promise<AgentResult> {
     const started = Date.now();
-    options.onEvent?.({ agentId: agent.id, status: 'started', at: started });
+    await options.onEvent?.({ agentId: agent.id, status: 'started', at: started, attempt });
     const timeoutMs = agent.timeoutMs ?? 15_000;
     let timeout: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    options.signal?.addEventListener('abort', abort, { once: true });
     try {
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeout = setTimeout(
-          () => reject(new GearXError('TIMEOUT', `${agent.name} timed out.`)),
+          () => {
+            controller.abort();
+            reject(new GearXError('TIMEOUT', `${agent.name} timed out.`));
+          },
           timeoutMs,
         );
       });
       const result = await Promise.race([
-        agent.run({ ...context, signal: options.signal }),
+        agent.run({ ...context, signal: controller.signal }),
         timeoutPromise,
       ]);
       const durationMs = Date.now() - started;
-      options.onEvent?.({
+      const status = options.signal?.aborted
+        ? 'cancelled'
+        : result.success
+          ? 'completed'
+          : 'failed';
+      await options.onEvent?.({
         agentId: agent.id,
-        status: options.signal?.aborted ? 'cancelled' : 'completed',
+        status,
         at: Date.now(),
         durationMs,
+        error: result.error,
+        attempt,
       });
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Agent failed';
-      options.onEvent?.({
+      await options.onEvent?.({
         agentId: agent.id,
         status: options.signal?.aborted ? 'cancelled' : 'failed',
         at: Date.now(),
         durationMs: Date.now() - started,
         error: message,
+        attempt,
       });
       return { agentId: agent.id, success: false, error: message };
     } finally {
       if (timeout) clearTimeout(timeout);
+      options.signal?.removeEventListener('abort', abort);
     }
   }
 

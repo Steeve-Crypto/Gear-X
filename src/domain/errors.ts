@@ -12,6 +12,8 @@ export type GearXErrorCode =
   | 'RETRIEVAL_FAILED'
   | 'INSUFFICIENT_EVIDENCE'
   | 'CORRUPT_SESSION'
+  | 'SESSION_NOT_RECOVERABLE'
+  | 'AGENT_FAILED'
   | 'MISSING_AUDIO_FILE'
   | 'NETWORK_UNAVAILABLE'
   | 'REMOTE_CONSENT_MISSING';
@@ -43,6 +45,8 @@ export const userErrorMessage = (error: unknown): string => {
     RETRIEVAL_FAILED: 'The vault search could not be completed.',
     INSUFFICIENT_EVIDENCE: 'No stored evidence supports an answer yet.',
     CORRUPT_SESSION: 'This capture session is incomplete or damaged.',
+    SESSION_NOT_RECOVERABLE: 'This session no longer has a recording that can be retried.',
+    AGENT_FAILED: 'The recording was transcribed, but knowledge processing did not complete.',
     MISSING_AUDIO_FILE: 'The recording file is no longer available.',
     NETWORK_UNAVAILABLE: 'A configured network provider cannot be reached.',
     REMOTE_CONSENT_MISSING: 'Enable remote-processing consent before using this provider.',

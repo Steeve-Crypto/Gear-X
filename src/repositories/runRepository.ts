@@ -4,7 +4,7 @@ import { openAppDatabase } from '../infrastructure/database';
 export const runRepository = {
   async recordAgentEvent(sessionId: string, group: string, event: RuntimeEvent): Promise<void> {
     const db = await openAppDatabase();
-    const id = `${group}:${event.agentId}`;
+    const id = `${group}:${event.agentId}:${event.attempt}`;
     if (event.status === 'started') {
       await db.runAsync(
         `INSERT OR REPLACE INTO agent_runs

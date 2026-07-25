@@ -56,11 +56,45 @@ export async function stopAndProcessSession(input: {
     endedAt,
     durationMs: endedAt - input.session.startedAt,
     status: 'processing',
-    audioUri: input.retainRecording ? uri : null,
+    audioUri: uri,
     updatedAt: endedAt,
   };
   await sessionRepository.update(session);
 
+  return processCapturedSession({
+    ...input,
+    session,
+    audioUri: uri,
+  });
+}
+
+export async function retryCapturedSession(input: {
+  sessionId: string;
+  provider: TranscriptionProvider;
+  retainRecording: boolean;
+  currentInsights: Insight[];
+  signal?: AbortSignal;
+  onAgents?: (ids: string[]) => void;
+}): Promise<{ session: CaptureSession; transcript: string; newInsights: Insight[] }> {
+  const existing = await sessionRepository.get(input.sessionId);
+  if (!existing?.audioUri || !['processing', 'failed'].includes(existing.status)) {
+    throw new GearXError('SESSION_NOT_RECOVERABLE', 'This session has no recoverable recording.');
+  }
+  const session = { ...existing, status: 'processing' as const, updatedAt: Date.now() };
+  await sessionRepository.update(session);
+  return processCapturedSession({ ...input, session, audioUri: existing.audioUri });
+}
+
+async function processCapturedSession(input: {
+  session: CaptureSession;
+  audioUri: string;
+  provider: TranscriptionProvider;
+  retainRecording: boolean;
+  currentInsights: Insight[];
+  signal?: AbortSignal;
+  onAgents?: (ids: string[]) => void;
+}): Promise<{ session: CaptureSession; transcript: string; newInsights: Insight[] }> {
+  let session = input.session;
   try {
     if (!(await input.provider.isAvailable())) {
       throw new GearXError('PROVIDER_UNAVAILABLE', 'The transcription provider is unavailable.');
@@ -78,7 +112,7 @@ export async function stopAndProcessSession(input: {
     try {
       transcription = await input.provider.transcribe({
         sessionId: session.id,
-        audioUri: uri,
+        audioUri: input.audioUri,
         signal: input.signal,
       });
       await runRepository.finishProvider(providerRunId, providerStartedAt);
@@ -86,8 +120,9 @@ export async function stopAndProcessSession(input: {
       await runRepository.finishProvider(providerRunId, providerStartedAt, 'TRANSCRIPTION_FAILED');
       throw error;
     }
-    for (const source of transcription.segments) {
-      await sessionRepository.addSegment({
+    await sessionRepository.replaceSegments(
+      session.id,
+      transcription.segments.map((source) => ({
         id: createId('segment'),
         sessionId: session.id,
         text: source.text,
@@ -96,8 +131,8 @@ export async function stopAndProcessSession(input: {
         speakerLabel: source.speakerLabel,
         confidence: source.confidence,
         createdAt: Date.now(),
-      });
-    }
+      })),
+    );
 
     const context = {
       sessionId: session.id,
@@ -113,14 +148,21 @@ export async function stopAndProcessSession(input: {
     const results = await runtime.execute(active, context, {
       signal: input.signal,
       idempotencyKey: runGroup,
-      onEvent: (event) => {
-        void runRepository.recordAgentEvent(session.id, runGroup, event);
-      },
+      onEvent: (event) => runRepository.recordAgentEvent(session.id, runGroup, event),
     });
+    const failure = results.find((result) => !result.success);
+    if (failure) {
+      throw new GearXError('AGENT_FAILED', failure.error ?? 'Knowledge processing failed.');
+    }
     const newInsights = results
       .filter((result) => result.agentId === 'extractor')
       .flatMap((result) => (result.data?.insights ?? []) as Insight[]);
-    session = { ...session, status: 'complete', updatedAt: Date.now() };
+    session = {
+      ...session,
+      status: 'complete',
+      audioUri: input.retainRecording ? input.audioUri : null,
+      updatedAt: Date.now(),
+    };
     await sessionRepository.update(session);
     return { session, transcript: transcription.text, newInsights };
   } catch (cause) {

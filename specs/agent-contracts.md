@@ -10,7 +10,7 @@ Autonomous external actions or an unbounded self-triggering agent loop.
 - I can see which agent is working and recover from a failed stage.
 - Maintainers can test routing and agents without UI or live providers.
 ## Functional requirements
-Router selects eligible agents in dependency order, deduplicates runs, limits iterations, honors cancellation, records runs, and surfaces typed errors.
+Router selects eligible agents in dependency order, deduplicates runs, limits iterations, honors cancellation, retries a failed idempotent specialist once, records every attempt, and surfaces typed errors.
 ## Technical requirements
 Each agent declares metadata and implements `canRun` and `run`; results use typed data, events, metrics, and errors.
 ## Failure states
@@ -22,6 +22,6 @@ All eight agents conform; Router does no specialist work; deterministic tests co
 ## Dependencies
 Inference providers, repositories, domain errors.
 ## Open implementation decisions
-Persistent retry queue for interrupted processing after beta.
+Background retry scheduling remains deferred; failed session processing is explicitly recoverable from its retained local recording.
 ## Verification method
-Contract compile checks, runtime unit tests, agent-run record inspection.
+Contract compile checks, runtime policy tests, agent-run record inspection, and failed-session recovery tests.

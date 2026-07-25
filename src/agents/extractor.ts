@@ -1,6 +1,6 @@
 import { Agent, AgentContext, AgentResult, Insight, KnowledgeEvent } from './types';
-import { callLocalLLM } from '../services/llm';
 import { parseInsightOutput } from '../domain/validation';
+import { requestInference } from '../services/inference';
 
 /**
  * Extractor Agent
@@ -43,7 +43,12 @@ Rules:
 
     const user = `Transcript:\n"""\n${ctx.recentTranscript}\n"""`;
 
-    const llmRaw = await callLocalLLM(system, user, { temperature: 0.2, maxTokens: 400 });
+    const llmRaw = await requestInference(ctx, 'extract', {
+      system,
+      prompt: user,
+      temperature: 0.2,
+      maxTokens: 400,
+    });
 
     if (llmRaw) {
       try {
@@ -62,8 +67,8 @@ Rules:
           }));
           source = 'llm';
         }
-      } catch (e) {
-        console.warn('[Extractor] LLM JSON parse failed, using rules', e);
+      } catch {
+        // Invalid provider output falls through to the deterministic local rules.
       }
     }
 

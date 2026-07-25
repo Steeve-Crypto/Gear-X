@@ -1,7 +1,7 @@
 import { Agent, AgentContext, AgentResult } from './types';
-import { callLocalLLM } from '../services/llm';
 import { saveSummary, logEvent, SummaryRecord } from '../services/database';
 import { validateSummaryOutput } from '../domain/validation';
+import { requestInference } from '../services/inference';
 
 /**
  * Summarizer Agent (Planet 4)
@@ -48,7 +48,12 @@ No markdown. No extra text.`;
     let body = '';
     let source: 'llm' | 'rules' = 'rules';
 
-    const llmRaw = await callLocalLLM(system, user, { temperature: 0.25, maxTokens: 350 });
+    const llmRaw = await requestInference(ctx, 'summarize', {
+      system,
+      prompt: user,
+      temperature: 0.25,
+      maxTokens: 350,
+    });
 
     if (llmRaw) {
       try {
@@ -56,8 +61,8 @@ No markdown. No extra text.`;
         title = parsed.title;
         body = parsed.body;
         source = 'llm';
-      } catch (e) {
-        console.warn('[Summarizer] LLM JSON parse failed, using rules', e);
+      } catch {
+        // Invalid provider output falls through to the deterministic local rules.
       }
     }
 

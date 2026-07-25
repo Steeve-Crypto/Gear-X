@@ -13,13 +13,13 @@ Pretending recorded audio is transcribed or shipping provider secrets.
 ## Functional requirements
 Availability test, timeout, cancellation, bounded retry, structured validation, consent gate, provider run metrics, and explicit fallback.
 ## Technical requirements
-`TranscriptionProvider` and `InferenceProvider` interfaces; AbortSignal; validated response schemas; ephemeral remote token contract.
+`TranscriptionProvider` and `InferenceProvider` interfaces; selected settings are injected into agent context rather than read from hard-coded defaults; AbortSignal; validated response schemas; ephemeral remote token contract.
 ## Failure states
 Unavailable endpoint/model, timeout, network failure, invalid output, missing consent/token, and unsupported on-device STT.
 ## Privacy implications
 Remote adapters show transfer state and require persisted consent. Prompts/responses are not logged by default.
 ## Acceptance criteria
-Mock and Ollama paths work; device adapter reports unsupported transcription honestly; remote execution cannot bypass consent.
+Mock and configured Ollama paths work; inference settings influence capture, summaries, Ask, and thread questions; device adapter reports unsupported transcription honestly; remote execution cannot bypass consent.
 ## Dependencies
 Privacy, settings, errors, agent runtime.
 ## Open implementation decisions

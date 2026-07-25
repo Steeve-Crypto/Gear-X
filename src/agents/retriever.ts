@@ -1,7 +1,7 @@
 import { Agent, AgentContext, AgentResult } from './types';
 import { searchInsights } from '../services/database';
-import { callLocalLLM } from '../services/llm';
 import { rankEvidence, retrievalQuality } from '../domain/retrieval';
+import { requestInference } from '../services/inference';
 
 /**
  * Retriever Agent (Planet 7)
@@ -59,7 +59,12 @@ Do not invent facts.`;
 
       const user = `Question: ${query}\n\nInsights from the vault:\n${contextBlock}`;
 
-      let answer = await callLocalLLM(system, user, { temperature: 0.2, maxTokens: 300 });
+      let answer = await requestInference(ctx, 'retrieve', {
+        system,
+        prompt: user,
+        temperature: 0.2,
+        maxTokens: 300,
+      });
       let source: 'llm' | 'fallback' = 'llm';
 
       // 3. Fallback: simple concatenation if LLM is offline
@@ -86,7 +91,6 @@ Do not invent facts.`;
         },
       };
     } catch (error: unknown) {
-      console.error('[Retriever] Failed:', error);
       return {
         agentId: 'retriever',
         success: false,

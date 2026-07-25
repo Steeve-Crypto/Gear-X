@@ -12,8 +12,11 @@ import {
 } from '../../components/primitives';
 import { SummaryRecord } from '../../services/database';
 import { SummaryRequest, summaryService } from '../../services/summaryService';
+import { createInferenceProvider } from '../../services/providerFactory';
+import { useSettingsStore } from '../../state/settingsStore';
 
 export default function SummariesScreen() {
+  const settings = useSettingsStore();
   const [summaries, setSummaries] = useState<SummaryRecord[]>([]);
   const [scope, setScope] = useState<SummaryRequest['scope']>('session');
   const [sourceId, setSourceId] = useState('');
@@ -29,7 +32,7 @@ export default function SummariesScreen() {
       const request: SummaryRequest = scope === 'daily'
         ? { scope, date }
         : { scope, sourceId: sourceId.trim() };
-      const result = await summaryService.generate(request);
+      const result = await summaryService.generate(request, createInferenceProvider(settings));
       setMessage(result ? 'Summary saved.' : 'At least two matching insights are required.');
       await load();
     } catch {
@@ -60,13 +63,14 @@ export default function SummariesScreen() {
     {!summaries.length ? <EmptyState title="No summaries yet"
       body="At least two matching stored insights are required." /> :
       summaries.map((summary) => <SummaryEditor key={summary.id} summary={summary}
-        onChange={load} />)}
+        onChange={load} inferenceProvider={createInferenceProvider(settings)} />)}
   </Screen>;
 }
 
-function SummaryEditor({ summary, onChange }: {
+function SummaryEditor({ summary, onChange, inferenceProvider }: {
   summary: SummaryRecord;
   onChange: () => Promise<void>;
+  inferenceProvider: ReturnType<typeof createInferenceProvider>;
 }) {
   const [title, setTitle] = useState(summary.title);
   const [body, setBody] = useState(summary.body);
@@ -83,7 +87,7 @@ function SummaryEditor({ summary, onChange }: {
       await summaryService.update(summary.id, title, body); await onChange();
     }} />
     <ActionButton label="Regenerate" onPress={async () => {
-      await summaryService.regenerate(summary); await onChange();
+      await summaryService.regenerate(summary, inferenceProvider); await onChange();
     }} />
     <ActionButton label="Delete summary" destructive onPress={async () => {
       await summaryService.remove(summary.id); await onChange();

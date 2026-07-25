@@ -16,7 +16,7 @@ Invalid endpoint, unreachable model, failed persistence/export/delete.
 ## Privacy implications
 Plain-language local storage/encryption limitation and remote disclosures are required.
 ## Acceptance criteria
-Changes survive restart and influence runtime; secrets are absent.
+Changes survive restart and influence runtime through provider injection; unconfigured remote inference falls back locally without sending data; secrets are absent.
 ## Dependencies
 Settings repository, providers, diagnostics, privacy.
 ## Open implementation decisions

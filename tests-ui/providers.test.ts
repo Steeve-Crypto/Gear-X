@@ -3,6 +3,10 @@ import {
   DeviceTranscriptionAdapter,
   MockTranscriptionProvider,
 } from '../src/infrastructure/transcription/providers';
+import { extractorAgent } from '../src/agents/extractor';
+import { MockInferenceProvider } from '../src/infrastructure/inference/mock';
+import { createInferenceProvider } from '../src/services/providerFactory';
+import { defaultSettings } from '../src/state/settingsStore';
 
 const fixture = {
   text: 'A deterministic transcript.',
@@ -59,5 +63,44 @@ describe('transcription provider boundaries', () => {
     });
     await expect(invalid.transcribe({ sessionId: 's', audioUri: 'file://a' }))
       .rejects.toMatchObject({ code: 'TRANSCRIPTION_FAILED' });
+  });
+});
+
+describe('inference provider selection', () => {
+  test('injects configured provider output into an agent', async () => {
+    const result = await extractorAgent.run({
+      recentTranscript: 'We decided to ship the release on Friday.',
+      currentInsights: [],
+      isListening: false,
+      inferenceProvider: new MockInferenceProvider(JSON.stringify([{
+        type: 'decision',
+        content: 'Ship the release on Friday.',
+        confidence: 0.94,
+      }])),
+    });
+
+    expect(result.data?.source).toBe('llm');
+    expect(result.data?.insights?.[0]).toMatchObject({
+      type: 'decision',
+      content: 'Ship the release on Friday.',
+    });
+  });
+
+  test('uses configured Ollama settings and keeps remote unconfigured', async () => {
+    const local = createInferenceProvider({
+      ...defaultSettings,
+      ollamaEndpoint: 'http://192.0.2.1:11434',
+      ollamaModel: 'gear-model',
+    });
+    expect(local).toMatchObject({ id: 'ollama', remote: false });
+
+    const remote = createInferenceProvider({
+      ...defaultSettings,
+      processingMode: 'remote',
+      remoteProcessingConsent: true,
+    });
+    expect(remote).toMatchObject({ id: 'remote-unconfigured', remote: true });
+    await expect(remote.generate({ system: 's', prompt: 'p' }))
+      .rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
   });
 });

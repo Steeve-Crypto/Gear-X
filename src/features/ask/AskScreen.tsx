@@ -11,8 +11,11 @@ import {
   Screen,
   commonStyles,
 } from '../../components/primitives';
+import { createInferenceProvider } from '../../services/providerFactory';
+import { useSettingsStore } from '../../state/settingsStore';
 
 export default function AskScreen() {
+  const settings = useSettingsStore();
   const [query, setQuery] = useState('');
   const [answer, setAnswer] = useState('');
   const [evidence, setEvidence] = useState<Insight[]>([]);
@@ -27,6 +30,8 @@ export default function AskScreen() {
         currentInsights: [],
         isListening: false,
         userQuery: query.trim(),
+        remoteConsent: settings.remoteProcessingConsent,
+        inferenceProvider: createInferenceProvider(settings),
       });
       setAnswer(result.data?.answer ?? result.error ?? 'No supported answer was found.');
       setEvidence(result.data?.matches ?? []);

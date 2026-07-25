@@ -5,7 +5,10 @@ import { ActionButton, EmptyState, Panel, Screen, commonStyles } from '../../com
 import { CaptureSession, TranscriptSegment } from '../../domain/models';
 import { sessionRepository } from '../../repositories/sessionRepository';
 import { retryCapturedSession } from '../../services/captureSession';
-import { createTranscriptionProvider } from '../../services/providerFactory';
+import {
+  createInferenceProvider,
+  createTranscriptionProvider,
+} from '../../services/providerFactory';
 import { useSettingsStore } from '../../state/settingsStore';
 import { userErrorMessage } from '../../domain/errors';
 
@@ -48,6 +51,7 @@ export default function SessionDetailScreen() {
               const result = await retryCapturedSession({
                 sessionId: session.id,
                 provider: createTranscriptionProvider(settings),
+                inferenceProvider: createInferenceProvider(settings),
                 retainRecording: settings.retainRecordings,
                 currentInsights: [],
                 autoSummarize: settings.autoSummarize,

@@ -11,10 +11,13 @@ import {
   commonStyles,
 } from '../../components/primitives';
 import { knowledgeRepository } from '../../repositories/knowledgeRepository';
+import { createInferenceProvider } from '../../services/providerFactory';
+import { useSettingsStore } from '../../state/settingsStore';
 
 type Detail = NonNullable<Awaited<ReturnType<typeof knowledgeRepository.thread>>>;
 
 export default function ThreadDetailScreen() {
+  const settings = useSettingsStore();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [detail, setDetail] = useState<Detail | null>();
   const [title, setTitle] = useState('');
@@ -59,6 +62,9 @@ export default function ThreadDetailScreen() {
       })),
       isListening: false,
       userQuery: question.trim(),
+      threadId: detail.thread.id,
+      remoteConsent: settings.remoteProcessingConsent,
+      inferenceProvider: createInferenceProvider(settings),
     });
     setAnswer(result.data?.answer ?? result.error ?? 'No supported answer was found.');
   };

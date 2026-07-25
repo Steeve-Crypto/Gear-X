@@ -14,4 +14,4 @@ Persistence, consent, retention, health, export/delete confirmation.
 ## Rollback considerations
 Use defaults for unknown settings while retaining stored values.
 ## Completion status
-Complete: persisted controls, consent, retention, explicit plaintext file sharing, export/delete, provider health, storage estimate, diagnostics export, settings-state tests, and consent tests are implemented.
+Complete: persisted controls, runtime provider injection, consent, retention, explicit plaintext file sharing, export/delete, provider health, storage estimate, diagnostics export, settings-state tests, and consent tests are implemented.

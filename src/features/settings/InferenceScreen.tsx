@@ -35,8 +35,15 @@ export default function InferenceScreen() {
             <ChoiceChip key={processingMode} label={processingMode}
               selected={settings.processingMode === processingMode}
               onPress={async () => {
+                if (processingMode === 'remote' && !settings.remoteProcessingConsent) {
+                  setResult('Enable remote-processing consent in Privacy before selecting remote mode.');
+                  return;
+                }
                 settings.update({ processingMode });
                 await settingsRepository.save({ processingMode });
+                setResult(processingMode === 'remote'
+                  ? 'Remote mode selected. A secure backend session is still required; local rules remain the fallback.'
+                  : 'Local Ollama mode selected.');
               }} />
           ))}
         </View>

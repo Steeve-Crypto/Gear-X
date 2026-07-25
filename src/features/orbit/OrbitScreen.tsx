@@ -15,7 +15,10 @@ import {
   startCaptureSession,
   stopAndProcessSession,
 } from '../../services/captureSession';
-import { createTranscriptionProvider } from '../../services/providerFactory';
+import {
+  createInferenceProvider,
+  createTranscriptionProvider,
+} from '../../services/providerFactory';
 import { sessionRepository } from '../../repositories/sessionRepository';
 
 export default function OrbitScreen() {
@@ -45,9 +48,10 @@ export default function OrbitScreen() {
   const start = async () => {
     setLastError(null);
     try {
+      const inferenceProvider = createInferenceProvider(settings);
       const session = await startCaptureSession({
         transcriptionProvider: settings.transcriptionProvider,
-        inferenceProvider: 'ollama',
+        inferenceProvider: inferenceProvider.id,
         processingMode: settings.processingMode,
       });
       setCurrent(session);
@@ -86,9 +90,11 @@ export default function OrbitScreen() {
     setActiveAgents(['listener']);
     try {
       const provider = createTranscriptionProvider(settings);
+      const inferenceProvider = createInferenceProvider(settings);
       const result = await stopAndProcessSession({
         session: current,
         provider,
+        inferenceProvider,
         retainRecording: settings.retainRecordings,
         currentInsights: insights.current,
         autoSummarize: settings.autoSummarize,
@@ -166,6 +172,12 @@ export default function OrbitScreen() {
       {lastError ? <Panel><Text style={styles.error}>{lastError}</Text>
         <Text style={commonStyles.body}>
           Recording is separate from transcription. Configure a compatible provider in Inference settings.
+        </Text>
+      </Panel> : null}
+      {current?.processingMode === 'remote' ? <Panel>
+        <Text style={commonStyles.label}>REMOTE PROCESSING SELECTED</Text>
+        <Text style={commonStyles.body}>
+          Data is sent only when a consent-gated secure backend provider is configured. Otherwise Gear X uses local rules.
         </Text>
       </Panel> : null}
       {transcript || lastInsight ? <Panel>

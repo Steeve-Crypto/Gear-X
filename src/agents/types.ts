@@ -55,6 +55,7 @@ export interface AgentContext {
   summaryScope?: 'session' | 'daily' | 'thread';
   signal?: AbortSignal;
   remoteConsent?: boolean;
+  inferenceProvider?: InferenceProvider;
 }
 
 export interface AgentResult {
@@ -114,3 +115,4 @@ export interface Agent {
   canRun?: (ctx: AgentContext) => boolean;
   run: (ctx: AgentContext) => Promise<AgentResult>;
 }
+import type { InferenceProvider } from '../infrastructure/inference/types';

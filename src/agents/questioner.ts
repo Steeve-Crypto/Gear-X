@@ -1,8 +1,8 @@
 import { Agent, AgentContext, AgentResult } from './types';
-import { callLocalLLM } from '../services/llm';
 import { logEvent } from '../services/database';
 import { knowledgeRepository } from '../repositories/knowledgeRepository';
 import { classifyQuestion } from '../domain/validation';
+import { requestInference } from '../services/inference';
 
 /**
  * Questioner Agent (Planet 5)
@@ -46,7 +46,12 @@ No markdown. No extra text.`;
     let questions: string[] = [];
     let source: 'llm' | 'rules' = 'rules';
 
-    const llmRaw = await callLocalLLM(system, user, { temperature: 0.3, maxTokens: 300 });
+    const llmRaw = await requestInference(ctx, 'question', {
+      system,
+      prompt: user,
+      temperature: 0.3,
+      maxTokens: 300,
+    });
 
     if (llmRaw) {
       try {
@@ -59,8 +64,8 @@ No markdown. No extra text.`;
             .slice(0, 5);
           if (questions.length > 0) source = 'llm';
         }
-      } catch (e) {
-        console.warn('[Questioner] LLM JSON parse failed, using rules', e);
+      } catch {
+        // Invalid provider output falls through to the deterministic local rules.
       }
     }
 

@@ -2,6 +2,7 @@ import { Insight } from '../agents/types';
 import { summarizerAgent } from '../agents/summarizer';
 import { VaultInsight } from '../domain/models';
 import { knowledgeRepository } from '../repositories/knowledgeRepository';
+import { InferenceProvider } from '../infrastructure/inference/types';
 import {
   deleteSummary,
   loadAllSummaries,
@@ -58,7 +59,10 @@ export const summaryService = {
   list: loadAllSummaries,
   update: updateSummary,
   remove: deleteSummary,
-  async generate(request: SummaryRequest): Promise<SummaryRecord | null> {
+  async generate(
+    request: SummaryRequest,
+    inferenceProvider?: InferenceProvider,
+  ): Promise<SummaryRecord | null> {
     const insights = await sourceInsights(request);
     const result = await summarizerAgent.run({
       recentTranscript: '',
@@ -67,16 +71,20 @@ export const summaryService = {
       sessionId: request.scope === 'session' ? request.sourceId : undefined,
       threadId: request.scope === 'thread' ? request.sourceId : undefined,
       summaryScope: request.scope,
+      inferenceProvider,
     });
     return result.data?.summary ?? null;
   },
-  async regenerate(summary: SummaryRecord): Promise<SummaryRecord | null> {
+  async regenerate(
+    summary: SummaryRecord,
+    inferenceProvider?: InferenceProvider,
+  ): Promise<SummaryRecord | null> {
     const request: SummaryRequest = summary.scope === 'thread' && summary.threadId
       ? { scope: 'thread', sourceId: summary.threadId }
       : summary.scope === 'daily'
         ? { scope: 'daily', date: new Date(summary.createdAt).toISOString().slice(0, 10) }
         : { scope: 'session', sourceId: summary.sessionId ?? '' };
-    const next = await this.generate(request);
+    const next = await this.generate(request, inferenceProvider);
     if (next) await deleteSummary(summary.id);
     return next;
   },

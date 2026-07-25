@@ -5,6 +5,7 @@ import { Insight } from '../agents/types';
 import { CaptureSession } from '../domain/models';
 import { GearXError } from '../domain/errors';
 import { TranscriptionProvider } from '../infrastructure/transcription/types';
+import { InferenceProvider } from '../infrastructure/inference/types';
 import { sessionRepository } from '../repositories/sessionRepository';
 import { createId } from '../utils/id';
 import { runRepository } from '../repositories/runRepository';
@@ -55,6 +56,7 @@ export async function setCaptureSessionStatus(
 export async function stopAndProcessSession(input: {
   session: CaptureSession;
   provider: TranscriptionProvider;
+  inferenceProvider?: InferenceProvider;
   retainRecording: boolean;
   currentInsights: Insight[];
   signal?: AbortSignal;
@@ -85,6 +87,7 @@ export async function stopAndProcessSession(input: {
 export async function retryCapturedSession(input: {
   sessionId: string;
   provider: TranscriptionProvider;
+  inferenceProvider?: InferenceProvider;
   retainRecording: boolean;
   currentInsights: Insight[];
   signal?: AbortSignal;
@@ -105,6 +108,7 @@ async function processCapturedSession(input: {
   session: CaptureSession;
   audioUri: string;
   provider: TranscriptionProvider;
+  inferenceProvider?: InferenceProvider;
   retainRecording: boolean;
   currentInsights: Insight[];
   signal?: AbortSignal;
@@ -158,6 +162,7 @@ async function processCapturedSession(input: {
       currentInsights: input.currentInsights,
       isListening: false,
       signal: input.signal,
+      inferenceProvider: input.inferenceProvider,
     };
     const routed = await routerAgent.run(context);
     const active = (routed.data?.activeAgents ?? []).filter((id) => (

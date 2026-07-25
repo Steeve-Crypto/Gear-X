@@ -13,6 +13,7 @@ Date: 2026-07-25
   - 10,000-record Vault benchmark: 100 queries, 6.76 ms average.
 - `expo config --type public`: passed; SDK 53, iOS and Android configuration resolved.
 - `expo install --check`: passed after applying SDK-compatible patch updates.
+- `expo start --offline --port 8087` runtime smoke: Metro reached its waiting state and returned HTTP 200 from the local entry endpoint. Offline manifest asset resolution emitted warnings, as expected with networking disabled.
 - `expo export --platform android --output-dir .expo-final`: passed.
   - Metro bundled 1,338 modules.
   - Hermes Android bundle produced successfully.

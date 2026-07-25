@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-In progress: lockfile-clean install, 33-test validation, SDK compatibility, Expo config, and a 1,338-module Android Hermes export pass. The 2026-07-25 production audit completed with 31 transitive findings (29 high, 2 moderate) whose offered fixes require an Expo/React Native major upgrade. Physical Android/iOS checks and that coordinated upgrade remain release blockers.
+In progress: lockfile-clean install, 33-test validation, SDK compatibility, Expo config, HTTP-200 offline Metro launch, and a 1,338-module Android Hermes export pass. The 2026-07-25 production audit completed with 31 transitive findings (29 high, 2 moderate) whose offered fixes require an Expo/React Native major upgrade. Physical Android/iOS checks and that coordinated upgrade remain release blockers.

@@ -5,21 +5,22 @@ Date: 2026-07-25
 ## Passed
 
 - `npm install --no-audit --no-fund`: completed.
-- Expanded focused verification:
-  - TypeScript strict check: passed after the final feature refactor.
-  - Node domain/SQLite suite: 18 tests expected in the final validation.
+- Final lockfile-clean `npm run validate`: passed.
+  - TypeScript strict check: passed.
+  - Node domain/SQLite/static suite: 18 passed, 0 failed.
   - Jest Expo UI/provider/runtime/pipeline suite: 15 passed, 0 failed.
+  - Expo ESLint: passed with 0 errors and 0 warnings.
   - 10,000-record Vault benchmark: 100 queries, 6.76 ms average.
 - `expo config --type public`: passed; SDK 53, iOS and Android configuration resolved.
-- `expo export --platform android --output-dir .expo-smoke`: passed.
-  - Metro bundled 1,306 modules.
+- `expo install --check`: passed after applying SDK-compatible patch updates.
+- `expo export --platform android --output-dir .expo-final`: passed.
+  - Metro bundled 1,338 modules.
   - Hermes Android bundle produced successfully.
   - Temporary export directory removed after verification.
 - Static production-path check found no simulated transcript injection or committed provider secret pattern.
 
 ## Not run
 
-- Final `npm run validate` and Android export rerun after the last feature/test changes.
 - Android physical-device microphone, interruption, restart persistence, and poor-network checks.
 - iOS simulator/physical-device checks.
 - Native offline transcription, because no native Whisper-compatible module is selected yet.

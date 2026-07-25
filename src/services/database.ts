@@ -68,6 +68,7 @@ export async function loadAllInsights(): Promise<Insight[]> {
   const database = await getDb();
   const rows = await database.getAllAsync<{
     id: string;
+    session_id: string | null;
     type: string;
     content: string;
     source_timestamp: number;
@@ -96,6 +97,7 @@ export async function searchInsights(query: string, limit = 12): Promise<Insight
   const clauses = tokens.map(() => 'LOWER(content) LIKE ?').join(' OR ');
   const rows = await database.getAllAsync<{
     id: string;
+    session_id: string | null;
     type: string;
     content: string;
     source_timestamp: number;
@@ -112,6 +114,7 @@ export async function searchInsights(query: string, limit = 12): Promise<Insight
 
   return rows.map((r) => ({
     id: r.id,
+    sessionId: r.session_id,
     type: r.type as Insight['type'],
     content: r.content,
     sourceTimestamp: r.source_timestamp,

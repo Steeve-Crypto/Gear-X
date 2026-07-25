@@ -14,4 +14,4 @@ Queries, pagination, filters, mutations, empty/error states.
 ## Rollback considerations
 UI rollback does not alter schema or records.
 ## Completion status
-In progress: paginated search/list and editable insight detail actions implemented; advanced filters and bulk selection remain.
+Implementation complete: stable pagination, highlighting, all specified filters, source context, plaintext export, and bulk archive/delete are implemented. Verification is tracked by task 012.

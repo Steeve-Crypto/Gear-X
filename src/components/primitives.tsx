@@ -76,6 +76,27 @@ export function Panel({ children }: PropsWithChildren) {
   return <View style={styles.panel}>{children}</View>;
 }
 
+export function ChoiceChip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[styles.chip, selected && styles.chipSelected]}
+    >
+      <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <View style={styles.empty}>
@@ -124,6 +145,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: spacing.md,
   },
+  chip: {
+    minHeight: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chipSelected: { backgroundColor: colors.brass, borderColor: colors.brassBright },
+  chipText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  chipTextSelected: { color: colors.obsidian },
   panel: {
     borderWidth: 1,
     borderColor: colors.border,

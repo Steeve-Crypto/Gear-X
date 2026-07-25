@@ -14,4 +14,4 @@ Relationship creation, duplicate prevention, unlink, UI detail.
 ## Rollback considerations
 Preserve thread records if graph UI is disabled.
 ## Completion status
-In progress: explicit persisted relationships and inspectable detail are implemented; manual link editing remains.
+Implementation complete: explicit relationships, rationale/confidence detail, manual metadata edits, link/unlink, and evidence-bounded thread questions are implemented. Verification is tracked by task 012.

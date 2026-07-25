@@ -27,7 +27,9 @@ export const retrieverAgent: Agent = {
 
     try {
       // 1. Pull relevant insights from the vault
-      const candidates = await searchInsights(query, 30);
+      const candidates = ctx.currentInsights.length
+        ? ctx.currentInsights
+        : await searchInsights(query, 30);
       const ranked = rankEvidence(query, candidates).slice(0, 10);
       const matches = ranked.map(({ score: _score, ...match }) => match);
 

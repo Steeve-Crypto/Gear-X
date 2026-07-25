@@ -70,6 +70,7 @@ export interface OpenLoop {
   priority: 'low' | 'medium' | 'high';
   dueAt: number | null;
   resolution: string | null;
+  reminderReady: boolean;
   createdAt: number;
   resolvedAt: number | null;
 }

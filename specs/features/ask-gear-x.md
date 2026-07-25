@@ -8,7 +8,7 @@ Open-domain assistant answers unsupported by the vault.
 ## User stories
 I can ask what I decided and verify every supporting record.
 ## Functional requirements
-Rank local records; separate evidence from synthesis; cite insights/sessions; expose retrieval quality.
+Rank local records; separate evidence from synthesis; cite insights/sessions; expose retrieval and source confidence; thread queries use only linked evidence.
 ## Technical requirements
 Deterministic lexical ranking baseline; provider synthesis receives only selected evidence; validated response.
 ## Failure states

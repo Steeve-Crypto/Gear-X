@@ -8,7 +8,7 @@ Concatenated prose disguised as a relationship.
 ## User stories
 I can understand why two insights are connected and correct the connection.
 ## Functional requirements
-Weaver creates explicit link records; users link/unlink and edit; details show connected insights and rationale.
+Weaver creates explicit link records; users link/unlink and edit; details show connected insights and rationale; thread questions are restricted to linked evidence.
 ## Technical requirements
 Normalized `threads` and `thread_insights`; unique pair constraints; transactional updates.
 ## Failure states
@@ -20,6 +20,6 @@ Automatic and manual relationships are inspectable and editable.
 ## Dependencies
 Weaver, repositories, inference validation.
 ## Open implementation decisions
-Graph visualization after mobile performance profiling.
+A denser graph visualization remains optional after mobile profiling; the accessible linked-record list is required.
 ## Verification method
 Relationship unit/integration and UI tests.

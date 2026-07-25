@@ -1,6 +1,16 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Circle, G, Path, Defs, LinearGradient, Stop, Line } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Ellipse,
+  G,
+  Line,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Stop,
+} from 'react-native-svg';
 import Animated, {
   useSharedValue,
   useAnimatedProps,
@@ -24,7 +34,7 @@ interface GearClockProps {
 /**
  * GearClock — Clock Planet visualization
  *
- * Central core (Sun) + orbiting planetary gears.
+ * A perspective-compressed orbital deck with extruded, orbiting planetary gears.
  * As insights grow, more orbital bodies appear / gain teeth / rings.
  * Feels like a living mechanical solar system / clock planet.
  */
@@ -155,7 +165,7 @@ export function GearClock({
   const summarizing = activeAgents.includes('summarizer');
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="gear-clock-3d" accessible={false}>
       <Svg width="100%" height="100%" viewBox="0 0 320 320">
         <Defs>
           <LinearGradient id="metal" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -172,147 +182,184 @@ export function GearClock({
             <Stop offset="50%" stopColor="#c08040" stopOpacity="0.55" />
             <Stop offset="100%" stopColor="#6a5a40" stopOpacity="0.3" />
           </LinearGradient>
+          <LinearGradient id="gearEdge" x1="0%" y1="0%" x2="0%" y2="100%">
+            <Stop offset="0%" stopColor="#6a5a40" />
+            <Stop offset="100%" stopColor="#1a1008" />
+          </LinearGradient>
+          <RadialGradient id="deck" cx="50%" cy="38%" rx="56%" ry="62%">
+            <Stop offset="0%" stopColor="#1a1a12" />
+            <Stop offset="68%" stopColor="#080808" />
+            <Stop offset="100%" stopColor="#1a1008" />
+          </RadialGradient>
+          <RadialGradient id="hubBevel" cx="38%" cy="30%" rx="70%" ry="70%">
+            <Stop offset="0%" stopColor="#e8dcc0" />
+            <Stop offset="42%" stopColor="#c08040" />
+            <Stop offset="100%" stopColor="#5a4a30" />
+          </RadialGradient>
         </Defs>
 
-        {/* Deep space background */}
-        <Circle cx="160" cy="160" r="155" fill="#080808" />
+        {/* The lower ellipses are the clock-planet's visible chassis and side wall. */}
+        <Ellipse cx="160" cy="177" rx="155" ry="127" fill="#1a1008" opacity="0.9" />
+        <Ellipse cx="160" cy="171" rx="155" ry="127" fill="url(#gearEdge)" stroke="#3a3a2a" strokeWidth="2" />
 
-        {/* Outer clock ticks (hour markers) */}
-        {Array.from({ length: 12 }).map((_, i) => {
-          const angle = (i * 30 * Math.PI) / 180;
-          const x1 = 160 + Math.cos(angle) * 138;
-          const y1 = 160 + Math.sin(angle) * 138;
-          const x2 = 160 + Math.cos(angle) * 148;
-          const y2 = 160 + Math.sin(angle) * 148;
-          return (
-            <Line
-              key={i}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#3a3a2a"
-              strokeWidth={i % 3 === 0 ? 2.5 : 1}
-            />
-          );
-        })}
+        {/* A tilted top plane turns the SVG clock face into a mechanical object in perspective. */}
+        <G transform="translate(0 20) scale(1 0.86)">
+          <Circle cx="160" cy="160" r="155" fill="url(#deck)" stroke="#5a4a30" strokeWidth="2" />
+          <Circle cx="160" cy="160" r="149" fill="none" stroke="#a09070" strokeWidth="1" opacity="0.55" />
 
-        {/* Orbital rings (appear as knowledge grows) */}
-        {showRings && (
-          <>
-            <Circle cx="160" cy="160" r="72" fill="none" stroke="url(#orbitRing)" strokeWidth="1.2" strokeDasharray="4 6" />
-            <Circle cx="160" cy="160" r="105" fill="none" stroke="url(#orbitRing)" strokeWidth="1" strokeDasharray="3 8" />
-          </>
-        )}
-        {insightCount >= 6 && (
-          <Circle cx="160" cy="160" r="128" fill="none" stroke="#4a3a25" strokeWidth="0.8" strokeDasharray="2 10" />
-        )}
+          {/* Outer clock ticks (hour markers) */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const angle = (i * 30 * Math.PI) / 180;
+            const x1 = 160 + Math.cos(angle) * 138;
+            const y1 = 160 + Math.sin(angle) * 138;
+            const x2 = 160 + Math.cos(angle) * 148;
+            const y2 = 160 + Math.sin(angle) * 148;
+            return (
+              <Line
+                key={i}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="#3a3a2a"
+                strokeWidth={i % 3 === 0 ? 2.5 : 1}
+              />
+            );
+          })}
 
-        {isProcessing && (
-          <Circle cx="160" cy="160" r="54" fill="none" stroke="#d6a85f" strokeWidth="2" strokeDasharray="2 5" />
-        )}
-        {hasOpenLoops && (
-          <Circle cx="160" cy="34" r="4" fill="#c97063" stroke="#e9e1d2" strokeWidth="1" />
-        )}
-        {extracting && (
-          <Circle cx="160" cy="160" r="48" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="5 3" />
-        )}
-        {weaving && (
-          <>
-            <Line x1="160" y1="160" x2="232" y2="160" stroke="#b88945" strokeWidth="1.5" />
-            <Line x1="160" y1="160" x2="92" y2="88" stroke="#b88945" strokeWidth="1" />
-          </>
-        )}
-        {retrieving && (
-          <Circle cx="160" cy="160" r="139" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="22 9" />
-        )}
-        {summarizing && (
-          <>
-            <Circle cx="160" cy="160" r="58" fill="none" stroke="#e9e1d2" strokeWidth="1.5" />
-            <Circle cx="160" cy="160" r="50" fill="none" stroke="#b88945" strokeWidth="1.5" />
-          </>
-        )}
+          {/* Orbital rings have darker offset rails beneath their engraved top edges. */}
+          {showRings && (
+            <>
+              <Circle cx="160" cy="166" r="72" fill="none" stroke="#1a1008" strokeWidth="3" opacity="0.75" />
+              <Circle cx="160" cy="160" r="72" fill="none" stroke="url(#orbitRing)" strokeWidth="1.2" strokeDasharray="4 6" />
+              <Circle cx="160" cy="167" r="105" fill="none" stroke="#1a1008" strokeWidth="3" opacity="0.75" />
+              <Circle cx="160" cy="160" r="105" fill="none" stroke="url(#orbitRing)" strokeWidth="1" strokeDasharray="3 8" />
+            </>
+          )}
+          {insightCount >= 6 && (
+            <>
+              <Circle cx="160" cy="168" r="128" fill="none" stroke="#1a1008" strokeWidth="3" opacity="0.7" />
+              <Circle cx="160" cy="160" r="128" fill="none" stroke="#4a3a25" strokeWidth="0.8" strokeDasharray="2 10" />
+            </>
+          )}
 
-        {/* === CENTRAL CORE (Sun / Clock Heart) === */}
-        <AnimatedG animatedProps={coreProps} origin="160, 160">
-          <Path
-            d={createGearPath(160, 160, 42, 30, coreTeeth)}
-            fill="url(#metal)"
-            stroke="#5a4a28"
-            strokeWidth="1.5"
-          />
-          <Circle cx="160" cy="160" r="18" fill="url(#coreGlow)" />
-          {archiving && <Circle cx="160" cy="160" r="14" fill="none" stroke="#e9e1d2" strokeWidth="2" />}
-          <Circle cx="160" cy="160" r="7" fill="#1a1008" />
-          <Circle cx="160" cy="160" r="3" fill="#f0a040" />
-        </AnimatedG>
+          {isProcessing && (
+            <Circle cx="160" cy="160" r="54" fill="none" stroke="#d6a85f" strokeWidth="2" strokeDasharray="2 5" />
+          )}
+          {hasOpenLoops && (
+            <Circle cx="160" cy="34" r="4" fill="#c97063" stroke="#e9e1d2" strokeWidth="1" />
+          )}
+          {extracting && (
+            <Circle cx="160" cy="160" r="48" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="5 3" />
+          )}
+          {weaving && (
+            <>
+              <Line x1="160" y1="160" x2="232" y2="160" stroke="#b88945" strokeWidth="1.5" />
+              <Line x1="160" y1="160" x2="92" y2="88" stroke="#b88945" strokeWidth="1" />
+            </>
+          )}
+          {retrieving && (
+            <Circle cx="160" cy="160" r="139" fill="none" stroke="#d6a85f" strokeWidth="3" strokeDasharray="22 9" />
+          )}
+          {summarizing && (
+            <>
+              <Circle cx="160" cy="160" r="58" fill="none" stroke="#e9e1d2" strokeWidth="1.5" />
+              <Circle cx="160" cy="160" r="50" fill="none" stroke="#b88945" strokeWidth="1.5" />
+            </>
+          )}
 
-        {/* === PLANET 1 (inner orbit) === */}
-        <AnimatedG animatedProps={o1Props} origin="160, 160">
-          <G>
+          {/* === CENTRAL CORE (Sun / Clock Heart) === */}
+          <AnimatedG animatedProps={coreProps} origin="160, 160">
             <Path
-              d={createGearPath(160 + 72, 160, 22, 15, p1Teeth)}
+              d={createGearPath(160, 168, 42, 30, coreTeeth)}
+              fill="url(#gearEdge)"
+              stroke="#1a1008"
+              strokeWidth="2"
+            />
+            <Path
+              d={createGearPath(160, 160, 42, 30, coreTeeth)}
+              fill="url(#metal)"
+              stroke="#5a4a28"
+              strokeWidth="1.5"
+            />
+            <Circle cx="160" cy="164" r="20" fill="#1a1008" opacity="0.9" />
+            <Circle cx="160" cy="160" r="18" fill="url(#coreGlow)" />
+            <Circle cx="160" cy="160" r="13" fill="url(#hubBevel)" opacity="0.6" />
+            {archiving && <Circle cx="160" cy="160" r="14" fill="none" stroke="#e9e1d2" strokeWidth="2" />}
+            <Circle cx="160" cy="160" r="7" fill="#1a1008" />
+            <Circle cx="158" cy="158" r="3" fill="#f0a040" />
+          </AnimatedG>
+
+          {/* === PLANET 1 (inner orbit) === */}
+          <AnimatedG animatedProps={o1Props} origin="160, 160">
+            <Path d={createGearPath(232, 166, 22, 15, p1Teeth)}
+              fill="url(#gearEdge)" stroke="#1a1008" strokeWidth="1.5" />
+            <Path
+              d={createGearPath(232, 160, 22, 15, p1Teeth)}
               fill="url(#metal)"
               stroke="#4a3a20"
               strokeWidth="1"
             />
-            <Circle cx={160 + 72} cy="160" r="6" fill="#1a1a12" stroke="#6a5a40" strokeWidth="1" />
-          </G>
-        </AnimatedG>
+            <Circle cx="232" cy="163" r="7" fill="#1a1008" />
+            <Circle cx="232" cy="160" r="6" fill="url(#hubBevel)" stroke="#6a5a40" strokeWidth="1" />
+          </AnimatedG>
 
-        {/* === PLANET 2 === */}
-        <AnimatedG animatedProps={o2Props} origin="160, 160">
-          <G>
+          {/* === PLANET 2 === */}
+          <AnimatedG animatedProps={o2Props} origin="160, 160">
+            <Path d={createGearPath(265, 167, 26, 18, p2Teeth)}
+              fill="url(#gearEdge)" stroke="#1a1008" strokeWidth="1.5" />
             <Path
-              d={createGearPath(160 + 105, 160, 26, 18, p2Teeth)}
+              d={createGearPath(265, 160, 26, 18, p2Teeth)}
               fill="url(#metal)"
               stroke="#4a3a20"
               strokeWidth="1.1"
             />
-            <Circle cx={160 + 105} cy="160" r="7" fill="#1a1a12" stroke="#6a5a40" strokeWidth="1" />
-          </G>
-        </AnimatedG>
+            <Circle cx="265" cy="164" r="8" fill="#1a1008" />
+            <Circle cx="265" cy="160" r="7" fill="url(#hubBevel)" stroke="#6a5a40" strokeWidth="1" />
+          </AnimatedG>
 
-        {/* === PLANET 3 === */}
-        <AnimatedG animatedProps={o3Props} origin="160, 160">
-          <G>
+          {/* === PLANET 3 === */}
+          <AnimatedG animatedProps={o3Props} origin="160, 160">
+            <Path d={createGearPath(265, 165, 18, 12, p3Teeth)}
+              fill="url(#gearEdge)" stroke="#1a1008" strokeWidth="1.3" />
             <Path
-              d={createGearPath(160 + 105, 160, 18, 12, p3Teeth)}
+              d={createGearPath(265, 160, 18, 12, p3Teeth)}
               fill="url(#metal)"
               stroke="#4a3a20"
               strokeWidth="1"
             />
-            {/* offset angle so it doesn't overlap planet 2 visually at start */}
-          </G>
-        </AnimatedG>
+          </AnimatedG>
 
-        {/* === PLANET 4 (appears after enough insights) === */}
-        {showPlanet4 && (
-          <AnimatedG animatedProps={o4Props} origin="160, 160">
-            <G>
+          {/* === PLANET 4 (appears after enough insights) === */}
+          {showPlanet4 && (
+            <AnimatedG animatedProps={o4Props} origin="160, 160">
+              <Path d={createGearPath(288, 165, 16, 11, 8 + Math.min(insightCount, 6))}
+                fill="url(#gearEdge)" stroke="#1a1008" strokeWidth="1.2" />
               <Path
-                d={createGearPath(160 + 128, 160, 16, 11, 8 + Math.min(insightCount, 6))}
+                d={createGearPath(288, 160, 16, 11, 8 + Math.min(insightCount, 6))}
                 fill="url(#metal)"
                 stroke="#4a3a20"
                 strokeWidth="1"
               />
-              <Circle cx={160 + 128} cy="160" r="5" fill="#1a1a12" stroke="#6a5a40" strokeWidth="0.8" />
-            </G>
-          </AnimatedG>
-        )}
+              <Circle cx="288" cy="163" r="6" fill="#1a1008" />
+              <Circle cx="288" cy="160" r="5" fill="url(#hubBevel)" stroke="#6a5a40" strokeWidth="0.8" />
+            </AnimatedG>
+          )}
 
-        {/* Listening pulse ring */}
-        {isListening && (
-          <Circle
-            cx="160"
-            cy="160"
-            r="152"
-            fill="none"
-            stroke="#c08040"
-            strokeWidth="2"
-            opacity="0.35"
-          />
-        )}
+          {/* Listening pulse ring */}
+          {isListening && (
+            <Circle
+              cx="160"
+              cy="160"
+              r="152"
+              fill="none"
+              stroke="#c08040"
+              strokeWidth="2"
+              opacity="0.35"
+            />
+          )}
+        </G>
+        <Ellipse cx="160" cy="287" rx="112" ry="11" fill="#080808" opacity="0.7" />
       </Svg>
     </View>
   );

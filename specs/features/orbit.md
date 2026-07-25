@@ -8,7 +8,7 @@ Decorative animation or background recording without platform support.
 ## User stories
 I can start a session, understand what is active, and stop safely.
 ## Functional requirements
-Clock state maps Listener, Extractor, Weaver, Archivist, Questioner, Retriever, Summarizer, and Visualizer; text mirrors status.
+Clock state maps Listener, Extractor, Weaver, Archivist, Questioner, Retriever, Summarizer, and Visualizer; text mirrors status; the clock uses perspective, physical depth, and counter-rotating mechanical layers rather than a flat face.
 ## Technical requirements
 Orbit consumes session/visualization selectors and capture service; it performs no SQL or provider calls.
 ## Failure states
@@ -16,7 +16,7 @@ Permission denial, interruption, transcription/provider failure, and offline sta
 ## Privacy implications
 Permission is requested in context; remote transfer is visibly labelled.
 ## Acceptance criteria
-Real recording creates a session; no simulated transcript timer; reduced motion stops continuous movement.
+Real recording creates a session; no simulated transcript timer; the clock remains visibly three-dimensional without changing the established colors; reduced motion stops continuous movement.
 ## Dependencies
 Session domain, audio, transcription, runtime, visual system.
 ## Open implementation decisions

@@ -4,7 +4,7 @@ Deliver state-driven capture and clock experience.
 ## Files involved
 Orbit route/feature, GearClock, session/visualization stores.
 ## Required changes
-Controls, duration, previews, agent status, permission/error/offline, reduced motion.
+Controls, duration, previews, agent status, permission/error/offline, reduced motion, and a layered 3D mechanical clock treatment using the existing palette.
 ## Constraints
 Clock preserves mechanical identity and is never sole status output.
 ## Acceptance criteria
@@ -14,4 +14,4 @@ Permission, start/pause/stop, processing, empty/error/reduced motion.
 ## Rollback considerations
 Capture service remains independent of the visualization.
 ## Completion status
-In progress: capture controls, status, real session state, agent signals, and motion modes implemented; physical-device verification remains.
+In progress: capture controls, status, real session state, agent signals, motion modes, and the palette-preserving perspective/extrusion 3D clock are implemented; physical-device verification remains.

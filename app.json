@@ -5,9 +5,6 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#0a0a0a"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -30,6 +27,12 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0a0a0a"
+        }
+      ],
       [
         "expo-audio",
         {

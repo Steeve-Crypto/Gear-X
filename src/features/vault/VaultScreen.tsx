@@ -28,6 +28,7 @@ export default function VaultScreen() {
   const [items, setItems] = useState<VaultInsight[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [filterReferenceTime] = useState(Date.now);
   const query = useMemo(() => ({
     search,
     sessionId: sessionId.trim() || undefined,
@@ -35,9 +36,9 @@ export default function VaultScreen() {
     unresolved,
     includeArchived,
     minConfidence: minConfidence || undefined,
-    createdAfter: days ? Date.now() - days * 86_400_000 : undefined,
+    createdAfter: days ? filterReferenceTime - days * 86_400_000 : undefined,
     limit,
-  }), [days, includeArchived, limit, minConfidence, search, sessionId, type, unresolved]);
+  }), [days, filterReferenceTime, includeArchived, limit, minConfidence, search, sessionId, type, unresolved]);
   const load = useCallback(() => {
     setError('');
     knowledgeRepository.insights(query)

@@ -18,7 +18,15 @@ export default function DiagnosticsScreen() {
     setLoading(false);
   }, [settings]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    let active = true;
+    collectDiagnostics(settings).then((next) => {
+      if (!active) return;
+      setSnapshot(next);
+      setLoading(false);
+    });
+    return () => { active = false; };
+  }, [settings]);
 
   const counts = snapshot?.counts ?? {};
   return (

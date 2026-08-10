@@ -28,7 +28,12 @@ export default function SessionDetailScreen() {
   };
 
   useEffect(() => {
-    if (id) void load(id);
+    if (!id) return;
+    let active = true;
+    sessionRepository.details(id)
+      .then((next) => { if (active) setDetails(next); })
+      .catch(() => { if (active) setError('The session details could not be loaded.'); });
+    return () => { active = false; };
   }, [id]);
 
   const session = details?.session ?? null;

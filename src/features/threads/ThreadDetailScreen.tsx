@@ -32,7 +32,17 @@ export default function ThreadDetailScreen() {
     setTitle(next?.thread.title ?? '');
     setDescription(next?.thread.description ?? '');
   }, [id]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    knowledgeRepository.thread(id).then((next) => {
+      if (!active) return;
+      setDetail(next);
+      setTitle(next?.thread.title ?? '');
+      setDescription(next?.thread.description ?? '');
+    });
+    return () => { active = false; };
+  }, [id]);
   if (detail === undefined) {
     return <Screen title="Thread"><Text style={commonStyles.body}>Loading relationship…</Text></Screen>;
   }

@@ -48,7 +48,7 @@ describe('capture session pipeline', () => {
     const session = await startCaptureSession({
       transcriptionProvider: 'mock-test',
       inferenceProvider: 'mock',
-      processingMode: 'local',
+      processingMode: 'balanced',
     });
     const paused = await setCaptureSessionStatus(session, 'paused');
     const resumed = await setCaptureSessionStatus(paused, 'recording');
@@ -69,7 +69,7 @@ describe('capture session pipeline', () => {
     const session = await startCaptureSession({
       transcriptionProvider: 'mock-test',
       inferenceProvider: 'mock',
-      processingMode: 'local',
+      processingMode: 'balanced',
     });
     const result = await stopAndProcessSession({
       session,
@@ -92,7 +92,7 @@ describe('capture session pipeline', () => {
     const session = await startCaptureSession({
       transcriptionProvider: 'device-adapter',
       inferenceProvider: 'mock',
-      processingMode: 'local',
+      processingMode: 'balanced',
     });
     const provider = {
       id: 'unavailable',

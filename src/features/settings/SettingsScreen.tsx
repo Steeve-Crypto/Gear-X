@@ -24,7 +24,7 @@ export default function SettingsScreen() {
         <SettingSwitch label="Automatic questions" value={settings.autoQuestion}
           onChange={(value) => change({ autoQuestion: value })} />
       </Panel>
-      <SettingsLink href="/settings/inference" title="Inference & transcription" body="Ollama endpoint, model, providers, and connectivity" />
+      <SettingsLink href="/settings/inference" title="AI & transcription" body="Privacy mode, device speech, cloud fallback, and developer providers" />
       <SettingsLink href="/settings/privacy" title="Privacy & data" body="Consent, retention, export, and deletion" />
       <SettingsLink href="/settings/diagnostics" title="Diagnostics" body="Database health, counts, providers, and recent errors" />
     </Screen>

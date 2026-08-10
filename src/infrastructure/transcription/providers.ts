@@ -1,21 +1,133 @@
 import { GearXError } from '../../domain/errors';
 import { TranscriptionInput, TranscriptionProvider, TranscriptionResult } from './types';
 import { canUseProvider } from '../../domain/privacy';
+import type {
+  ExpoSpeechRecognitionErrorEvent,
+  ExpoSpeechRecognitionResultEvent,
+} from 'expo-speech-recognition';
+
+export interface SpeechModule {
+  abort(): void;
+  addListener(
+    event: 'result' | 'error' | 'end',
+    listener: (event: ExpoSpeechRecognitionResultEvent | ExpoSpeechRecognitionErrorEvent | null) => void,
+  ): { remove(): void };
+  isRecognitionAvailable(): boolean;
+  requestPermissionsAsync(): Promise<{ granted: boolean }>;
+  start(options: Record<string, unknown>): void;
+  supportsOnDeviceRecognition(): boolean;
+  supportsRecording(): boolean;
+}
+
+function loadSpeechModule(): SpeechModule | null {
+  try {
+    return require('expo-speech-recognition').ExpoSpeechRecognitionModule as SpeechModule;
+  } catch {
+    return null;
+  }
+}
 
 export class DeviceTranscriptionAdapter implements TranscriptionProvider {
-  id = 'device-adapter';
-  name = 'On-device transcription';
+  id = 'native-speech';
+  name = 'Device speech recognition';
   remote = false;
 
+  constructor(
+    private readonly requireOnDevice = true,
+    private readonly module: SpeechModule | null = loadSpeechModule(),
+    private readonly timeoutMs = 120_000,
+  ) {}
+
   async isAvailable(): Promise<boolean> {
-    return false;
+    if (!this.module) return false;
+    try {
+      return this.module.isRecognitionAvailable()
+        && this.module.supportsRecording()
+        && (!this.requireOnDevice || this.module.supportsOnDeviceRecognition());
+    } catch {
+      return false;
+    }
   }
 
-  async transcribe(_input: TranscriptionInput): Promise<TranscriptionResult> {
-    throw new GearXError(
-      'PROVIDER_UNAVAILABLE',
-      'Offline transcription requires a configured native Whisper-compatible module.',
-    );
+  async transcribe(input: TranscriptionInput): Promise<TranscriptionResult> {
+    if (!this.module || !(await this.isAvailable())) {
+      throw new GearXError('PROVIDER_UNAVAILABLE', 'Device speech recognition is unavailable.');
+    }
+    if (input.signal?.aborted) throw new GearXError('TRANSCRIPTION_FAILED', 'Cancelled');
+    const permission = await this.module.requestPermissionsAsync();
+    if (!permission.granted) {
+      throw new GearXError('MIC_PERMISSION_DENIED', 'Speech recognition permission was denied.');
+    }
+
+    const speech = this.module;
+    return new Promise<TranscriptionResult>((resolve, reject) => {
+      let settled = false;
+      let latest: ExpoSpeechRecognitionResultEvent | null = null;
+      const finish = (result?: TranscriptionResult, error?: GearXError) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        input.signal?.removeEventListener('abort', cancel);
+        resultSubscription.remove();
+        errorSubscription.remove();
+        endSubscription.remove();
+        if (error) reject(error);
+        else if (result) resolve(result);
+        else reject(new GearXError('TRANSCRIPTION_FAILED', 'Device speech returned no text.'));
+      };
+      const toResult = (event: ExpoSpeechRecognitionResultEvent): TranscriptionResult | undefined => {
+        const best = event.results[0];
+        if (!best?.transcript.trim()) return undefined;
+        return {
+          text: best.transcript.trim(),
+          confidence: best.confidence >= 0 ? best.confidence : null,
+          segments: best.segments?.length ? best.segments.map((segment) => ({
+            text: segment.segment,
+            startMs: segment.startTimeMillis,
+            endMs: segment.endTimeMillis,
+            confidence: segment.confidence >= 0 ? segment.confidence : null,
+            speakerLabel: null,
+          })) : [{
+            text: best.transcript.trim(),
+            startMs: 0,
+            endMs: 0,
+            confidence: best.confidence >= 0 ? best.confidence : null,
+            speakerLabel: null,
+          }],
+        };
+      };
+      const resultSubscription = speech.addListener('result', (rawEvent) => {
+        const event = rawEvent as ExpoSpeechRecognitionResultEvent;
+        latest = event;
+        if (event.isFinal) finish(toResult(event));
+      });
+      const errorSubscription = speech.addListener('error', (rawEvent) => {
+        const event = rawEvent as ExpoSpeechRecognitionErrorEvent;
+        finish(undefined, new GearXError(
+          event.error === 'not-allowed' ? 'MIC_PERMISSION_DENIED' : 'TRANSCRIPTION_FAILED',
+          `Device speech failed: ${event.error}.`,
+        ));
+      });
+      const endSubscription = speech.addListener('end', () => finish(latest ? toResult(latest) : undefined));
+      const cancel = () => {
+        speech.abort();
+        finish(undefined, new GearXError('TRANSCRIPTION_FAILED', 'Cancelled'));
+      };
+      const timeout = setTimeout(() => {
+        speech.abort();
+        finish(undefined, new GearXError('TIMEOUT', 'Device transcription timed out.'));
+      }, this.timeoutMs);
+      input.signal?.addEventListener('abort', cancel, { once: true });
+      speech.start({
+        lang: input.locale ?? 'en-US',
+        continuous: true,
+        interimResults: false,
+        maxAlternatives: 1,
+        addsPunctuation: true,
+        requiresOnDeviceRecognition: this.requireOnDevice,
+        audioSource: { uri: input.audioUri },
+      });
+    });
   }
 }
 
@@ -121,13 +233,19 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
       throw new GearXError('REMOTE_CONSENT_MISSING', 'Remote transcription consent is required.');
     }
     const token = await this.config.getAccessToken();
+    const body = new FormData();
+    body.append('session_id', input.sessionId);
+    body.append('file', {
+      uri: input.audioUri,
+      name: `${input.sessionId}.m4a`,
+      type: 'audio/m4a',
+    } as unknown as Blob);
     const response = await fetch(`${this.config.baseUrl}/v1/transcriptions`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ sessionId: input.sessionId, audioUri: input.audioUri }),
+      body,
       signal: input.signal,
     });
     if (!response.ok) {

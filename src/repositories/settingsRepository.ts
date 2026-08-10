@@ -4,6 +4,15 @@ import { defaultSettings } from '../state/settingsStore';
 
 const allowedKeys = new Set<keyof AppSettings>(Object.keys(defaultSettings) as (keyof AppSettings)[]);
 
+export function normalizeProcessingMode(value: unknown): AppSettings['processingMode'] | undefined {
+  if (value === 'local') return 'private';
+  if (value === 'remote') return 'quality';
+  if (value === 'private' || value === 'balanced' || value === 'quality' || value === 'developer') {
+    return value;
+  }
+  return undefined;
+}
+
 export const settingsRepository = {
   async load(): Promise<AppSettings> {
     const db = await openAppDatabase();
@@ -12,7 +21,13 @@ export const settingsRepository = {
     for (const row of rows) {
       if (!allowedKeys.has(row.key as keyof AppSettings)) continue;
       try {
-        Object.assign(settings, { [row.key]: JSON.parse(row.value) });
+        const value = JSON.parse(row.value) as unknown;
+        if (row.key === 'processingMode') {
+          const mode = normalizeProcessingMode(value);
+          if (mode) settings.processingMode = mode;
+        } else {
+          Object.assign(settings, { [row.key]: value });
+        }
       } catch {
         // Invalid old settings are ignored in favor of safe local defaults.
       }

@@ -37,7 +37,18 @@
         }
       ],
       "expo-asset"
+      ,
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Gear X to access your microphone so the gears can listen and remember.",
+          "speechRecognitionPermission": "Allow Gear X to privately turn your recordings into text."
+        }
+      ]
     ],
-    "scheme": "gearx"
+    "scheme": "gearx",
+    "extra": {
+      "gearXBackendUrl": ""
+    }
   }
 }

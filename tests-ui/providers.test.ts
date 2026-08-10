@@ -7,6 +7,11 @@ import { extractorAgent } from '../src/agents/extractor';
 import { MockInferenceProvider } from '../src/infrastructure/inference/mock';
 import { createInferenceProvider } from '../src/services/providerFactory';
 import { defaultSettings } from '../src/state/settingsStore';
+import { CapabilityInferenceRouter } from '../src/infrastructure/inference/capabilityRouter';
+import { TranscriptionRouter } from '../src/infrastructure/transcription/router';
+import { InferenceProvider } from '../src/infrastructure/inference/types';
+import { SpeechModule } from '../src/infrastructure/transcription/providers';
+import { normalizeProcessingMode } from '../src/repositories/settingsRepository';
 
 const fixture = {
   text: 'A deterministic transcript.',
@@ -22,7 +27,7 @@ const fixture = {
 
 describe('transcription provider boundaries', () => {
   test('device boundary is honest and the test provider is deterministic', async () => {
-    const device = new DeviceTranscriptionAdapter();
+    const device = new DeviceTranscriptionAdapter(true, null);
     expect(await device.isAvailable()).toBe(false);
     await expect(device.transcribe({ sessionId: 's', audioUri: 'file://a' }))
       .rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
@@ -30,6 +35,44 @@ describe('transcription provider boundaries', () => {
     const mock = new MockTranscriptionProvider(fixture);
     await expect(mock.transcribe({ sessionId: 's', audioUri: 'file://a' }))
       .resolves.toEqual(fixture);
+  });
+
+  test('native speech converts a final recorded-file event', async () => {
+    const listeners = new Map<string, (event: unknown) => void>();
+    const speech = {
+      abort: jest.fn(),
+      addListener: jest.fn((event: string, listener: (value: unknown) => void) => {
+        listeners.set(event, listener);
+        return { remove: jest.fn() };
+      }),
+      isRecognitionAvailable: () => true,
+      requestPermissionsAsync: async () => ({ granted: true }),
+      start: jest.fn(() => listeners.get('result')?.({
+        isFinal: true,
+        results: [{
+          transcript: 'A real device transcript.',
+          confidence: 0.91,
+          segments: [{ segment: 'A real device transcript.', startTimeMillis: 0, endTimeMillis: 900, confidence: 0.91 }],
+        }],
+      })),
+      supportsOnDeviceRecognition: () => true,
+      supportsRecording: () => true,
+    } as unknown as SpeechModule;
+    const device = new DeviceTranscriptionAdapter(true, speech, 1_000);
+    await expect(device.transcribe({ sessionId: 's', audioUri: 'file://recording.m4a' }))
+      .resolves.toMatchObject({ text: 'A real device transcript.', confidence: 0.91 });
+    expect(speech.start).toHaveBeenCalledWith(expect.objectContaining({
+      requiresOnDeviceRecognition: true,
+      audioSource: { uri: 'file://recording.m4a' },
+    }));
+  });
+
+  test('transcription router falls back after an unavailable provider', async () => {
+    const unavailable = { id: 'no', name: 'no', remote: false, isAvailable: async () => false, transcribe: jest.fn() };
+    const fallback = new MockTranscriptionProvider(fixture);
+    const router = new TranscriptionRouter([unavailable, fallback]);
+    await expect(router.transcribe({ sessionId: 's', audioUri: 'file://a' })).resolves.toEqual(fixture);
+    expect(unavailable.transcribe).not.toHaveBeenCalled();
   });
 
   test('mock provider honors cancellation', async () => {
@@ -64,6 +107,22 @@ describe('transcription provider boundaries', () => {
     await expect(invalid.transcribe({ sessionId: 's', audioUri: 'file://a' }))
       .rejects.toMatchObject({ code: 'TRANSCRIPTION_FAILED' });
   });
+
+  test('remote backend uploads the actual audio as multipart data', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValueOnce({
+      ok: true,
+      json: async () => fixture,
+    } as Response);
+    const provider = new BackendTranscriptionProvider({
+      baseUrl: 'https://gearx.invalid',
+      getAccessToken: async () => 'short-lived',
+      hasRemoteConsent: () => true,
+    });
+    await provider.transcribe({ sessionId: 's', audioUri: 'file://recording.m4a' });
+    const request = fetchSpy.mock.calls[0][1] as RequestInit;
+    expect(request.body).toBeInstanceOf(FormData);
+    expect(request.headers).not.toMatchObject({ 'Content-Type': 'application/json' });
+  });
 });
 
 describe('inference provider selection', () => {
@@ -86,21 +145,48 @@ describe('inference provider selection', () => {
     });
   });
 
-  test('uses configured Ollama settings and keeps remote unconfigured', async () => {
-    const local = createInferenceProvider({
+  test('normal defaults do not probe Ollama and developer mode retains it', async () => {
+    const fetchSpy = jest.spyOn(global, 'fetch');
+    const normal = createInferenceProvider(defaultSettings);
+    expect(normal).toMatchObject({ id: 'capability-router', remote: false });
+    await expect(normal.isAvailable()).resolves.toBe(false);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fetchSpy.mockResolvedValueOnce({ ok: true, json: async () => ({ models: [{ name: 'gear-model' }] }) } as Response);
+    const developer = createInferenceProvider({
       ...defaultSettings,
+      processingMode: 'developer',
       ollamaEndpoint: 'http://192.0.2.1:11434',
       ollamaModel: 'gear-model',
     });
-    expect(local).toMatchObject({ id: 'ollama', remote: false });
+    await expect(developer.isAvailable()).resolves.toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith('http://192.0.2.1:11434/api/tags', expect.anything());
+  });
 
-    const remote = createInferenceProvider({
-      ...defaultSettings,
-      processingMode: 'remote',
-      remoteProcessingConsent: true,
-    });
-    expect(remote).toMatchObject({ id: 'remote-unconfigured', remote: true });
-    await expect(remote.generate({ system: 's', prompt: 'p' }))
-      .rejects.toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
+  test('capability router skips unsupported providers and falls back', async () => {
+    const unsupported: InferenceProvider = {
+      id: 'unsupported', name: 'unsupported', remote: false,
+      metadata: { capabilities: ['summarization'], costClass: 'free', configured: true },
+      isAvailable: async () => true,
+      generate: jest.fn(async () => 'wrong'),
+    };
+    const fallback: InferenceProvider = {
+      id: 'fallback', name: 'fallback', remote: false,
+      metadata: { capabilities: ['answer-synthesis'], costClass: 'free', configured: true },
+      isAvailable: async () => true,
+      generate: jest.fn(async () => 'evidence-backed answer'),
+    };
+    const router = new CapabilityInferenceRouter([unsupported, fallback]);
+    await expect(router.generate({
+      system: 's', prompt: 'p', capability: 'answer-synthesis',
+    })).resolves.toBe('evidence-backed answer');
+    expect(unsupported.generate).not.toHaveBeenCalled();
+  });
+
+  test('migrates legacy modes to safe named modes', () => {
+    expect(normalizeProcessingMode('local')).toBe('private');
+    expect(normalizeProcessingMode('remote')).toBe('quality');
+    expect(normalizeProcessingMode('balanced')).toBe('balanced');
+    expect(normalizeProcessingMode('unknown')).toBeUndefined();
   });
 });

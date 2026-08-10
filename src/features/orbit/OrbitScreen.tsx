@@ -174,7 +174,7 @@ export default function OrbitScreen() {
           Recording is separate from transcription. Configure a compatible provider in Inference settings.
         </Text>
       </Panel> : null}
-      {current?.processingMode === 'remote' ? <Panel>
+      {current?.processingMode === 'quality' ? <Panel>
         <Text style={commonStyles.label}>REMOTE PROCESSING SELECTED</Text>
         <Text style={commonStyles.body}>
           Data is sent only when a consent-gated secure backend provider is configured. Otherwise Gear X uses local rules.

@@ -2,41 +2,75 @@ import { AppSettings } from '../domain/models';
 import { GearXError } from '../domain/errors';
 import { OllamaProvider } from '../infrastructure/inference/ollama';
 import { InferenceProvider } from '../infrastructure/inference/types';
+import { BackendInferenceProvider } from '../infrastructure/inference/backend';
+import { CapabilityInferenceRouter } from '../infrastructure/inference/capabilityRouter';
 import {
+  BackendTranscriptionProvider,
   DeviceTranscriptionAdapter,
   LocalWhisperServerProvider,
 } from '../infrastructure/transcription/providers';
 import { TranscriptionProvider } from '../infrastructure/transcription/types';
+import { TranscriptionRouter } from '../infrastructure/transcription/router';
+import Constants from 'expo-constants';
+
+function backendUrl(): string {
+  const value = Constants.expoConfig?.extra?.gearXBackendUrl;
+  return typeof value === 'string' ? value.replace(/\/$/, '') : '';
+}
+
+async function getBackendSessionToken(baseUrl: string): Promise<string> {
+  const response = await fetch(`${baseUrl}/v1/mobile/session`, { method: 'POST' });
+  if (!response.ok) throw new GearXError('PROVIDER_UNAVAILABLE', 'Backend session is unavailable.');
+  const payload = (await response.json()) as { token?: string };
+  if (!payload.token) throw new GearXError('PROVIDER_UNAVAILABLE', 'Backend returned no session token.');
+  return payload.token;
+}
 
 export function createTranscriptionProvider(
   settings: AppSettings,
 ): TranscriptionProvider {
-  if (settings.transcriptionProvider === 'local-whisper-server') {
-    return new LocalWhisperServerProvider(
+  const device = new DeviceTranscriptionAdapter(true);
+  const endpoint = backendUrl();
+  const cloud = endpoint && settings.cloudTranscriptionEnabled
+    ? new BackendTranscriptionProvider({
+      baseUrl: endpoint,
+      getAccessToken: () => getBackendSessionToken(endpoint),
+      hasRemoteConsent: () => settings.remoteProcessingConsent,
+    })
+    : null;
+  const localWhisper = settings.transcriptionProvider === 'local-whisper-server'
+    ? new LocalWhisperServerProvider(
       settings.transcriptionEndpoint,
       () => settings.remoteProcessingConsent,
-    );
+    )
+    : null;
+  if (settings.processingMode === 'private') return new TranscriptionRouter([device]);
+  if (settings.processingMode === 'quality') {
+    return new TranscriptionRouter([...(cloud ? [cloud] : []), device]);
   }
-  return new DeviceTranscriptionAdapter();
+  if (settings.processingMode === 'developer') {
+    return new TranscriptionRouter([device, ...(localWhisper ? [localWhisper] : []), ...(cloud ? [cloud] : [])]);
+  }
+  return new TranscriptionRouter([device, ...(cloud ? [cloud] : [])]);
 }
 
 export function createInferenceProvider(settings: AppSettings): InferenceProvider {
-  if (settings.processingMode === 'local') {
-    return new OllamaProvider(settings.ollamaEndpoint, settings.ollamaModel);
+  const providers: InferenceProvider[] = [];
+  const endpoint = backendUrl();
+  const cloudAllowed = endpoint
+    && settings.processingMode !== 'private'
+    && settings.processingMode !== 'developer'
+    && settings.cloudIntelligenceEnabled
+    && settings.remoteProcessingConsent;
+  if (cloudAllowed) {
+    providers.push(new BackendInferenceProvider({
+      baseUrl: endpoint,
+      getAccessToken: () => getBackendSessionToken(endpoint),
+      hasRemoteConsent: () => settings.remoteProcessingConsent,
+    }));
   }
-  return {
-    id: 'remote-unconfigured',
-    name: 'Remote inference (not configured)',
-    remote: true,
-    isAvailable: async () => false,
-    generate: async () => {
-      if (!settings.remoteProcessingConsent) {
-        throw new GearXError('REMOTE_CONSENT_MISSING', 'Remote inference consent is required.');
-      }
-      throw new GearXError(
-        'PROVIDER_UNAVAILABLE',
-        'A secure backend session is required for remote inference.',
-      );
-    },
-  };
+  if (settings.processingMode === 'developer') {
+    providers.push(new OllamaProvider(settings.ollamaEndpoint, settings.ollamaModel));
+  }
+  return new CapabilityInferenceRouter(providers);
 }

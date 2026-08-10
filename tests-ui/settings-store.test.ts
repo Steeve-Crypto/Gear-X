@@ -10,7 +10,7 @@ describe('settings state selectors', () => {
     expect(useSettingsStore.getState()).toMatchObject({
       reducedMotion: true,
       dataRetentionDays: 30,
-      processingMode: 'local',
+      processingMode: 'balanced',
       hydrated: true,
     });
   });

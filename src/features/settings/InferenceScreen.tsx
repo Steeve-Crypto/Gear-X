@@ -4,6 +4,15 @@ import { ActionButton, ChoiceChip, Field, Panel, Screen, commonStyles } from '..
 import { OllamaProvider } from '../../infrastructure/inference/ollama';
 import { settingsRepository } from '../../repositories/settingsRepository';
 import { useSettingsStore } from '../../state/settingsStore';
+import { ProcessingMode } from '../../domain/models';
+import { createInferenceProvider, createTranscriptionProvider } from '../../services/providerFactory';
+
+const modes: { id: ProcessingMode; label: string; description: string }[] = [
+  { id: 'private', label: 'Private', description: 'On-device speech and local deterministic intelligence only.' },
+  { id: 'balanced', label: 'Balanced', description: 'Local first, with consented cloud fallback when configured.' },
+  { id: 'quality', label: 'Quality', description: 'Prefer consented cloud quality, then fall back on-device.' },
+  { id: 'developer', label: 'Developer', description: 'Enable Ollama and custom local endpoints.' },
+];
 
 export default function InferenceScreen() {
   const settings = useSettingsStore();
@@ -19,7 +28,7 @@ export default function InferenceScreen() {
     };
     settings.update(patch);
     await settingsRepository.save(patch);
-    setResult('Local inference settings saved.');
+    setResult('Developer provider settings saved.');
   };
   const test = async () => {
     setResult('Testing local model…');
@@ -31,28 +40,48 @@ export default function InferenceScreen() {
       <Panel>
         <Text style={commonStyles.label}>Processing mode</Text>
         <View style={commonStyles.row}>
-          {(['local', 'remote'] as const).map((processingMode) => (
-            <ChoiceChip key={processingMode} label={processingMode}
-              selected={settings.processingMode === processingMode}
+          {modes.map((mode) => (
+            <ChoiceChip key={mode.id} label={mode.label}
+              selected={settings.processingMode === mode.id}
               onPress={async () => {
-                if (processingMode === 'remote' && !settings.remoteProcessingConsent) {
+                if (mode.id === 'quality' && !settings.remoteProcessingConsent) {
                   setResult('Enable remote-processing consent in Privacy before selecting remote mode.');
                   return;
                 }
-                settings.update({ processingMode });
-                await settingsRepository.save({ processingMode });
-                setResult(processingMode === 'remote'
-                  ? 'Remote mode selected. A secure backend session is still required; local rules remain the fallback.'
-                  : 'Local Ollama mode selected.');
+                settings.update({ processingMode: mode.id });
+                await settingsRepository.save({ processingMode: mode.id });
+                setResult(mode.description);
               }} />
           ))}
         </View>
+        <Text style={commonStyles.body}>
+          {modes.find((mode) => mode.id === settings.processingMode)?.description}
+        </Text>
+      </Panel>
+      <Panel>
+        <Text style={commonStyles.label}>Runtime availability</Text>
+        <ActionButton label="Check providers" onPress={async () => {
+          setResult('Checking device and configured providersâ€¦');
+          const transcription = createTranscriptionProvider(settings);
+          const inference = createInferenceProvider(settings);
+          const [speechReady, modelReady] = await Promise.all([
+            transcription.isAvailable(), inference.isAvailable(),
+          ]);
+          setResult(`Speech: ${speechReady ? 'available' : 'unavailable'} Â· Optional model: ${modelReady ? 'available' : 'local rules active'}`);
+        }} />
+        <Text style={commonStyles.body}>
+          Gear X always keeps local rules and vault retrieval available. Device speech needs a native development or store build and installed language support.
+        </Text>
+      </Panel>
+      {settings.processingMode === 'developer' ? <>
+      <Panel>
+        <Text style={commonStyles.meta}>DEVELOPER PROVIDERS</Text>
         <Text style={commonStyles.label}>Ollama endpoint</Text>
         <Field value={endpoint} onChangeText={setEndpoint} autoCapitalize="none" autoCorrect={false} />
         <Text style={commonStyles.label}>Model</Text>
         <Field value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} />
-        <ActionButton label="Save local provider" onPress={save} />
-        <ActionButton label="Test connection" onPress={test} />
+        <ActionButton label="Save developer provider" onPress={save} />
+        <ActionButton label="Test Ollama" onPress={test} />
       </Panel>
       <Panel>
         <Text style={commonStyles.label}>Voice provider</Text>
@@ -89,9 +118,10 @@ export default function InferenceScreen() {
         <Field value={transcriptionEndpoint} onChangeText={setTranscriptionEndpoint}
           autoCapitalize="none" autoCorrect={false} accessibilityLabel="Transcription endpoint" />
         <Text style={commonStyles.body}>
-          Audio recording works in Expo. The native adapter reports unavailable until a Whisper-compatible module is added. A local-network Whisper server is a real transcription path, but sending audio off-device still requires remote-processing consent.
+          Native OS speech is the consumer default. The local Whisper server is an optional developer fallback, and sending audio off-device still requires consent.
         </Text>
       </Panel>
+      </> : null}
       {result ? <Text accessibilityLiveRegion="polite" style={commonStyles.body}>{result}</Text> : null}
     </Screen>
   );

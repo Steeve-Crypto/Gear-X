@@ -3,6 +3,7 @@ import { GearXError } from '../domain/errors';
 import { InferenceRequest } from '../infrastructure/inference/types';
 import { runRepository } from '../repositories/runRepository';
 import { createId } from '../utils/id';
+import { operationCapability } from '../domain/aiCapabilities';
 
 export async function requestInference(
   context: AgentContext,
@@ -29,7 +30,11 @@ export async function requestInference(
       if (runId) await runRepository.finishProvider(runId, startedAt, 'PROVIDER_UNAVAILABLE');
       return '';
     }
-    const output = await provider.generate({ ...request, signal: context.signal });
+    const output = await provider.generate({
+      ...request,
+      capability: operationCapability[operation],
+      signal: context.signal,
+    });
     if (runId) await runRepository.finishProvider(runId, startedAt);
     return output;
   } catch (error) {

@@ -1,4 +1,4 @@
-export type ProcessingMode = 'local' | 'remote';
+export type ProcessingMode = 'private' | 'balanced' | 'quality' | 'developer';
 export type SessionStatus = 'recording' | 'paused' | 'processing' | 'complete' | 'failed';
 export type InsightType = 'fact' | 'decision' | 'action' | 'entity' | 'deadline' | 'open_loop';
 export type LoopCategory =
@@ -90,4 +90,7 @@ export interface AppSettings {
   transcriptionEndpoint: string;
   voiceProvider: string;
   dataRetentionDays: number;
+  cloudTranscriptionEnabled: boolean;
+  cloudIntelligenceEnabled: boolean;
+  dailyCloudRequestLimit: number;
 }

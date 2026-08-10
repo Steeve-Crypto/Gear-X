@@ -1,10 +1,20 @@
 import { GearXError } from '../../domain/errors';
 import { InferenceProvider, InferenceRequest } from './types';
+import { AICapability } from '../../domain/aiCapabilities';
+
+const capabilities: AICapability[] = [
+  'structured-extraction',
+  'relationship-refinement',
+  'summarization',
+  'question-refinement',
+  'answer-synthesis',
+];
 
 export class OllamaProvider implements InferenceProvider {
   id = 'ollama';
   name = 'Ollama';
   remote = false;
+  metadata = { capabilities, costClass: 'free' as const, configured: true };
 
   constructor(
     private readonly baseUrl: string,

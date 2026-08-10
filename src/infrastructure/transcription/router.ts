@@ -1,0 +1,38 @@
+import { GearXError } from '../../domain/errors';
+import { TranscriptionInput, TranscriptionProvider, TranscriptionResult } from './types';
+
+export class TranscriptionRouter implements TranscriptionProvider {
+  id = 'transcription-router';
+  name = 'Transcription router';
+  remote = false;
+
+  constructor(private readonly providers: readonly TranscriptionProvider[]) {}
+
+  async isAvailable(): Promise<boolean> {
+    for (const provider of this.providers) {
+      if (await provider.isAvailable()) return true;
+    }
+    return false;
+  }
+
+  async transcribe(input: TranscriptionInput): Promise<TranscriptionResult> {
+    let lastError: unknown;
+    for (const provider of this.providers) {
+      if (input.signal?.aborted) throw new GearXError('TRANSCRIPTION_FAILED', 'Cancelled');
+      if (!(await provider.isAvailable())) continue;
+      try {
+        return await provider.transcribe(input);
+      } catch (error) {
+        lastError = error;
+        if (error instanceof GearXError && (
+          error.code === 'REMOTE_CONSENT_MISSING' || error.code === 'MIC_PERMISSION_DENIED'
+        )) throw error;
+      }
+    }
+    throw new GearXError(
+      'PROVIDER_UNAVAILABLE',
+      'No allowed transcription provider is available.',
+      lastError,
+    );
+  }
+}

@@ -9,13 +9,16 @@ export const defaultSettings: AppSettings = {
   retainRecordings: false,
   autoSummarize: true,
   autoQuestion: true,
-  processingMode: 'local',
+  processingMode: 'balanced',
   ollamaEndpoint: 'http://localhost:11434',
   ollamaModel: 'qwen2.5:3b',
   transcriptionProvider: 'device-adapter',
   transcriptionEndpoint: 'http://localhost:8080',
   voiceProvider: 'none',
   dataRetentionDays: 0,
+  cloudTranscriptionEnabled: true,
+  cloudIntelligenceEnabled: true,
+  dailyCloudRequestLimit: 25,
 };
 
 interface SettingsState extends AppSettings {

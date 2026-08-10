@@ -1,6 +1,15 @@
 import { GearXError } from '../../domain/errors';
 import { canUseProvider } from '../../domain/privacy';
 import { InferenceProvider, InferenceRequest } from './types';
+import { AICapability } from '../../domain/aiCapabilities';
+
+const capabilities: AICapability[] = [
+  'structured-extraction',
+  'relationship-refinement',
+  'summarization',
+  'question-refinement',
+  'answer-synthesis',
+];
 
 export interface BackendInferenceConfig {
   baseUrl: string;
@@ -12,6 +21,7 @@ export class BackendInferenceProvider implements InferenceProvider {
   id = 'secure-backend';
   name = 'Secure backend inference';
   remote = true;
+  metadata = { capabilities, costClass: 'metered' as const, configured: true };
 
   constructor(private readonly config: BackendInferenceConfig) {}
 
@@ -39,6 +49,7 @@ export class BackendInferenceProvider implements InferenceProvider {
         prompt: request.prompt,
         temperature: request.temperature,
         maxTokens: request.maxTokens,
+        capability: request.capability,
       }),
     });
     if (!response.ok) throw new GearXError('PROVIDER_UNAVAILABLE', `Backend returned ${response.status}.`);

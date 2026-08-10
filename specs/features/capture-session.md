@@ -10,7 +10,7 @@ I can revisit a session with its transcript, insights, summary, questions, threa
 ## Functional requirements
 Unique ID, timestamps, duration, optional audio URI, status, provider/mode fields, cascade deletion, recovery state, and a detail view of transcript, insights, summaries, questions, related threads, agent runs, and provider runs.
 ## Technical requirements
-Repository transactions and explicit state transitions; recording, paused, resumed, processing, complete, and failed states are persisted rather than held only in UI memory; recording and transcription are separate.
+Repository transactions and explicit state transitions; recording, paused, resumed, processing, complete, and failed states are persisted rather than held only in UI memory; recording and transcription are separate. Maintained `expo-audio` APIs capture locally; successful non-retained recordings are explicitly deleted, while retained and failed-session URIs remain recoverable subject to platform storage behavior.
 ## Failure states
 Missing audio, corrupt record, interruption, partial processing, and database error.
 ## Privacy implications

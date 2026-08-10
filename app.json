@@ -31,13 +31,14 @@
     "plugins": [
       "expo-router",
       [
-        "expo-av",
+        "expo-audio",
         {
-          "microphonePermission": "Allow Gear X to access your microphone so the gears can listen and remember."
+          "microphonePermission": "Allow Gear X to access your microphone so the gears can listen and remember.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
         }
       ],
-      "expo-asset"
-      ,
+      "expo-asset",
       [
         "expo-speech-recognition",
         {

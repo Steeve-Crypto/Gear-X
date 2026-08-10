@@ -1,17 +1,26 @@
-import { Audio } from 'expo-av';
+import {
+  AudioModule,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from 'expo-audio';
+import type { AudioRecorder, RecordingOptions } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
 
 /**
  * Audio Service for Gear X
- * Handles microphone permissions and recording using expo-av.
+ * Handles microphone permissions and recording using expo-audio.
  * Feeds status into the Listener agent.
  */
 
-let recording: Audio.Recording | null = null;
+let recording: AudioRecorder | null = null;
+const NativeAudioRecorder = Reflect.get(AudioModule, 'AudioRecorder') as new (
+  options: Partial<RecordingOptions>,
+) => AudioRecorder;
 
 export async function requestMicrophonePermission(): Promise<boolean> {
-  const { status } = await Audio.requestPermissionsAsync();
-  return status === 'granted';
+  const { granted } = await requestRecordingPermissionsAsync();
+  return granted;
 }
 
 export async function startListening(): Promise<boolean> {
@@ -21,18 +30,16 @@ export async function startListening(): Promise<boolean> {
       return false;
     }
 
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: true,
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
+    await setAudioModeAsync({
+      allowsRecording: true,
+      playsInSilentMode: true,
+      shouldPlayInBackground: false,
     });
 
-    const { recording: newRecording } = await Audio.Recording.createAsync(
-      Audio.RecordingOptionsPresets.HIGH_QUALITY
-    );
-
-    recording = newRecording;
+    const nextRecording = new NativeAudioRecorder(RecordingPresets.HIGH_QUALITY);
+    await nextRecording.prepareToRecordAsync();
+    nextRecording.record();
+    recording = nextRecording;
     return true;
   } catch {
     return false;
@@ -42,19 +49,16 @@ export async function startListening(): Promise<boolean> {
 export async function stopListening(): Promise<string | null> {
   if (!recording) return null;
 
+  const activeRecording = recording;
   try {
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
+    await activeRecording.stop();
+    const uri = activeRecording.uri;
     recording = null;
-
-    // Reset audio mode
-    await Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-    });
-
-    return uri; // local file URI of the recording
+    await setAudioModeAsync({ allowsRecording: false });
+    return uri;
   } catch {
     recording = null;
+    await setAudioModeAsync({ allowsRecording: false }).catch(() => undefined);
     return null;
   }
 }
@@ -62,7 +66,7 @@ export async function stopListening(): Promise<string | null> {
 export async function pauseListening(): Promise<boolean> {
   if (!recording) return false;
   try {
-    await recording.pauseAsync();
+    recording.pause();
     return true;
   } catch {
     return false;
@@ -72,7 +76,7 @@ export async function pauseListening(): Promise<boolean> {
 export async function resumeListening(): Promise<boolean> {
   if (!recording) return false;
   try {
-    await recording.startAsync();
+    recording.record();
     return true;
   } catch {
     return false;

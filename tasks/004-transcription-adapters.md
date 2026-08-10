@@ -14,4 +14,4 @@ Mock, cancellation, unavailable, consent, invalid result.
 ## Rollback considerations
 Captured recording/session remains recoverable after provider failure.
 ## Completion status
-Complete for the documented beta boundary: production never fabricates transcripts; deterministic mock, unavailable device boundary, consent-gated local-network Whisper, secure backend adapter, cancellation, validation, and recoverable failure paths are implemented. Native on-device STT remains a disclosed post-beta integration.
+Reopened for production: the honest provider boundary is complete, but native OS speech and actual-file cloud upload are required by `specs/ai-runtime.md` before this task is complete.

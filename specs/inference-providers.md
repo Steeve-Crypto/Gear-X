@@ -3,7 +3,7 @@
 ## Purpose
 Separate recording, transcription, reasoning, and voice providers behind reliable contracts.
 ## Scope
-Device-development, mock, Ollama, optional remote text, and Grok Voice adapter boundaries.
+Capability routing, native speech, deterministic intelligence, mock providers, optional remote text/transcription, and Developer-mode Ollama/local endpoints.
 ## Non-goals
 Pretending recorded audio is transcribed or shipping provider secrets.
 ## User stories
@@ -23,6 +23,6 @@ Mock and configured Ollama paths work; inference settings influence capture, sum
 ## Dependencies
 Privacy, settings, errors, agent runtime.
 ## Open implementation decisions
-Native Whisper/Moonshine module and production backend provider.
+Production backend deployment/authentication and optional offline whisper.cpp pack. See `specs/ai-runtime.md` for the evaluated runtime decision.
 ## Verification method
 Provider unit tests, unreachable Ollama test, consent test, physical-device audio/transcription check.

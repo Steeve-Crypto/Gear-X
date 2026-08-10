@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-In progress: lockfile-clean install, automated validation, SDK compatibility, Expo config, rendered Metro web preview with SQLite WASM and hardware WebGL support, HTTP-200 offline Metro launch, and Android Hermes exports pass. The real 3D gear build bundles 1,248 modules into 6.25 MB. The dependency audit must be refreshed after the 3D dependency addition; physical Android/iOS capture/GPU checks and the coordinated SDK upgrade remain release blockers.
+In progress. See `RELEASE_STATUS.md`. AI capability routing and production transcription are active milestone work; backend deployment, physical Android/iOS capture/transcription/GPU checks, dependency audit, and the coordinated SDK upgrade remain blockers.

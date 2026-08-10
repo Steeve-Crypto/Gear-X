@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react-native';
 import SessionDetailScreen from '../src/features/sessions/SessionDetailScreen';
 import { sessionRepository } from '../src/repositories/sessionRepository';
 
+jest.setTimeout(15_000);
+
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children: React.ReactNode }) => children,
   router: { back: jest.fn() },

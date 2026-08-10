@@ -75,10 +75,17 @@ npm run validate
 Native transcription requires a development/store build and cannot run in Expo Go. After signing into Expo and linking this repository to an EAS project:
 
 ```bash
-npx eas-cli@latest build --platform android --profile development
+npm run build:android:dev
+npx eas-cli@latest device:create
+npm run build:ios:dev
+npm run build:ios:simulator
 ```
 
-The development profile produces an internally distributed APK for physical-device verification. No provider credentials belong in the build.
+- Android produces an internally distributed APK for a physical device or emulator.
+- iOS device builds use ad hoc provisioning and require a paid Apple Developer account plus a registered device UDID.
+- iOS Simulator builds do not require an Apple Developer account, but installing/running them still requires macOS with Xcode Simulator.
+
+No provider credentials belong in any build.
 
 ## Privacy
 

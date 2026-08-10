@@ -28,7 +28,7 @@ Recent milestones:
 - AI runtime validation passes: 19 domain/SQLite/static tests, 27 Jest tests, type checking, and lint.
 - Expo SDK dependency compatibility and native speech public-config/plugin resolution pass.
 - Native speech behavior is unit-tested through its bridge, but no physical-device transcription is claimed.
-- `expo-dev-client` and `eas.json` prepare an internal Android APK. `npx eas-cli@latest whoami` reported `Not logged in`; sign in and link/create the EAS project before submitting the build.
+- `expo-dev-client` and `eas.json` provide explicit internal Android APK, ad hoc iOS device, and iOS Simulator profiles. `npx eas-cli@latest whoami` reported `Not logged in`; sign in and link/create the EAS project before submitting either platform. Physical iOS additionally needs Apple Developer credentials and `eas device:create`; Simulator installation needs macOS/Xcode.
 
 - Full `npm run validate` passed after the WebGL conversion: 18 domain tests, 20 Jest tests, type checking, and lint.
 - Focused 3D gear-profile tests passed: 2/2.

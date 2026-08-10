@@ -7,8 +7,11 @@
 - [ ] `npm run validate` passes.
 - [ ] Expo starts without route/config errors.
 - [x] Internal Android development-client APK profile is configured.
+- [x] Ad hoc iOS device and iOS Simulator development-client profiles are configured.
 - [ ] Expo account is authenticated and the app is linked to an EAS project.
 - [ ] Android development APK builds and installs.
+- [ ] iOS Simulator development build completes and runs on macOS/Xcode.
+- [ ] iOS device is registered and the ad hoc development build installs.
 - [ ] Android physical-device microphone and audio recording pass.
 - [ ] iOS simulator or physical-device navigation and permissions pass.
 - [ ] SQLite survives process restart.

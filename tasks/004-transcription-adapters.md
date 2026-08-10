@@ -14,4 +14,4 @@ Mock, cancellation, unavailable, consent, invalid result.
 ## Rollback considerations
 Captured recording/session remains recoverable after provider failure.
 ## Completion status
-Reopened for production: the honest provider boundary is complete, but native OS speech and actual-file cloud upload are required by `specs/ai-runtime.md` before this task is complete.
+Implementation complete: native Apple/Android recorded-file speech, availability detection, timeout/cancellation, ordered fallback, actual multipart backend upload, consent, and deterministic test paths are implemented. Physical iOS/Android format/locale verification and backend deployment remain release gates rather than implemented claims.

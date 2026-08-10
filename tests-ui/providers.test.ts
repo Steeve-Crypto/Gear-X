@@ -75,6 +75,18 @@ describe('transcription provider boundaries', () => {
     expect(unavailable.transcribe).not.toHaveBeenCalled();
   });
 
+  test('transcription router times out and uses the next provider', async () => {
+    const slow = {
+      id: 'slow', name: 'slow', remote: false,
+      isAvailable: async () => true,
+      transcribe: ({ signal }: { signal?: AbortSignal }) => new Promise<never>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+      }),
+    };
+    const router = new TranscriptionRouter([slow, new MockTranscriptionProvider(fixture)], undefined, 5);
+    await expect(router.transcribe({ sessionId: 's', audioUri: 'file://a' })).resolves.toEqual(fixture);
+  });
+
   test('mock provider honors cancellation', async () => {
     const controller = new AbortController();
     controller.abort();

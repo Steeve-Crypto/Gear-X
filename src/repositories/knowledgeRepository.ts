@@ -466,6 +466,7 @@ export const knowledgeRepository = {
       'thread_insights',
       'agent_runs',
       'provider_runs',
+      'provider_usage',
     ] as const;
     const data: Record<string, unknown> = {
       format: 'gear-x-export',

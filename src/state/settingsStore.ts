@@ -12,7 +12,7 @@ export const defaultSettings: AppSettings = {
   processingMode: 'balanced',
   ollamaEndpoint: 'http://localhost:11434',
   ollamaModel: 'qwen2.5:3b',
-  transcriptionProvider: 'device-adapter',
+  transcriptionProvider: 'automatic',
   transcriptionEndpoint: 'http://localhost:8080',
   voiceProvider: 'none',
   dataRetentionDays: 0,

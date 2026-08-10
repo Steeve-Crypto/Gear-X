@@ -14,4 +14,4 @@ Persistence, consent, retention, health, export/delete confirmation.
 ## Rollback considerations
 Use defaults for unknown settings while retaining stored values.
 ## Completion status
-Complete: persisted controls, runtime provider injection, consent, retention, explicit plaintext file sharing, export/delete, provider health, storage estimate, diagnostics export, settings-state tests, and consent tests are implemented.
+Complete for implemented behavior: Private/Balanced/Quality/Developer modes, consent, per-capability cloud toggles, durable daily limit, runtime provider injection, diagnostics, export/delete, retention, and Developer-only Ollama configuration are implemented.

@@ -14,4 +14,4 @@ Decisions, dependencies, duplicate keys, timeout, cancellation, loop cap.
 ## Rollback considerations
 Legacy direct agents remain adapter-compatible during migration.
 ## Completion status
-Complete: ordering, dedupe, bounded retry, timeout cancellation, awaited attempt events, metadata, typed failures, and persisted runs are implemented and covered by deterministic policy tests.
+Complete: ordering, dedupe, bounded retry, timeout cancellation, awaited attempt events, metadata, typed failures, persisted runs, per-task AI capabilities, and provider fallback are implemented and covered by deterministic policy/provider tests.

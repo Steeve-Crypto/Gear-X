@@ -21,6 +21,8 @@ export interface SpeechModule {
 
 function loadSpeechModule(): SpeechModule | null {
   try {
+    // Lazy loading keeps Expo Go/web usable when the custom native module is absent.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('expo-speech-recognition').ExpoSpeechRecognitionModule as SpeechModule;
   } catch {
     return null;

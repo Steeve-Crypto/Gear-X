@@ -6,17 +6,20 @@ Gear X is not yet cleared for App Store or Google Play submission.
 
 - Eight-agent Router architecture, normalized SQLite repositories, persistent sessions, evidence-backed local retrieval, privacy controls, export/deletion, and the real-time 3D mechanical gear body.
 - Deterministic local extraction, weaving, summarization, questioning, retrieval, visualization, and archival paths that do not require an LLM.
-- Optional Ollama and local Whisper development adapters; production code never fabricates transcripts.
+- Capability-based transcription and text-inference routers with ordered fallback, timeout/cancellation, malformed-output handling, and task-scoped capabilities.
+- Private, Balanced, Quality, and Developer modes. Normal defaults do not instantiate or probe Ollama.
+- Native Apple/Android recorded-file speech bridge, optional consented multipart backend transcription, and Developer-only Ollama/local Whisper adapters. Production code never fabricates transcripts.
+- Local FTS5 vault search where available, indexed lexical fallback elsewhere, local evidence ranking, and optional minimal-context synthesis.
+- Separate cloud transcription/intelligence switches and a durable daily request limit. Usage records contain no transcript, prompt, response, or audio.
 
 ## Current release blockers
 
-- The capability router, four consumer/developer processing modes, native speech bridge, real multipart cloud fallback, availability UI, and usage limits specified in `specs/ai-runtime.md` are not yet implemented.
 - No production Gear X backend URL, mobile session/authentication service, xAI server configuration, rate limits, budget, or operational monitoring has been deployed or verified.
-- Native transcription and 3D GPU/capture behavior have not been exercised on physical iOS and Android devices.
+- Native recorded-file transcription and 3D GPU/capture behavior have not been exercised on physical iOS and Android devices. The native bridge requires a development/store build and does not run in Expo Go.
 - Recorded-file speech support varies by Android version, installed speech service, locale pack, and device; a cloud fallback is required for broad reliability.
 - The Expo SDK/dependency security and compatibility upgrade remains open.
 - Local SQLite data is sandboxed but not application-level encrypted.
 
 ## Verification evidence
 
-The last recorded repository state passed the checks described in `specs/release-readiness.md`. This file will be updated with new command results after the AI runtime implementation. No physical-device or store-review result is claimed.
+`npm run validate` passes: type checking, 19 domain/SQLite/static tests, 27 Jest UI/provider/runtime/pipeline tests, and lint. Expo SDK dependency compatibility and public config/plugin resolution also pass. No physical-device, deployed-backend, or store-review result is claimed.

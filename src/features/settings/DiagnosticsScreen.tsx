@@ -6,6 +6,7 @@ import { knowledgeRepository } from '../../repositories/knowledgeRepository';
 import { useSettingsStore } from '../../state/settingsStore';
 import { useSessionStore } from '../../state/sessionStore';
 import { runRepository } from '../../repositories/runRepository';
+import { usageRepository } from '../../repositories/usageRepository';
 
 export default function DiagnosticsScreen() {
   const settings = useSettingsStore();
@@ -15,6 +16,7 @@ export default function DiagnosticsScreen() {
   const [runs, setRuns] = useState<Record<string, unknown>[]>([]);
   const [exportText, setExportText] = useState('');
   const [storageBytes, setStorageBytes] = useState(0);
+  const [cloudUses, setCloudUses] = useState(0);
   useEffect(() => {
     getDatabaseVersion().then(setVersion).catch(() => setVersion(-1));
     knowledgeRepository.counts().then(setCounts).catch(() => setCounts({}));
@@ -22,6 +24,7 @@ export default function DiagnosticsScreen() {
     knowledgeRepository.exportAll().then((data) => {
       setStorageBytes(JSON.stringify(data).length * 2);
     }).catch(() => setStorageBytes(0));
+    usageRepository.todayCount().then(setCloudUses).catch(() => setCloudUses(0));
   }, []);
   return (
     <Screen title="Diagnostics" eyebrow="INTERNAL HEALTH">
@@ -33,6 +36,7 @@ export default function DiagnosticsScreen() {
         <Row label="Threads" value={String(counts.threads ?? 0)} />
         <Row label="Open-loop records" value={String(counts.questions ?? 0)} />
         <Row label="Approximate export size" value={`${Math.ceil(storageBytes / 1024)} KB`} />
+        <Row label="Cloud requests today" value={`${cloudUses} / ${settings.dailyCloudRequestLimit}`} />
       </Panel>
       <Panel>
         <Text style={commonStyles.meta}>RECENT AGENT RUNS</Text>
@@ -61,7 +65,9 @@ export default function DiagnosticsScreen() {
       }, null, 2))} />
       {exportText ? <Panel><Text selectable style={commonStyles.body}>{exportText}</Text></Panel> : null}
       <Panel>
-        <Row label="Inference" value={`Ollama · ${settings.ollamaModel}`} />
+        <Row label="AI runtime" value={settings.processingMode === 'developer'
+          ? `Developer · Ollama ${settings.ollamaModel}`
+          : `${settings.processingMode} · deterministic local baseline`} />
         <Row label="Transcription" value={settings.transcriptionProvider} />
         <Row label="Processing" value={settings.processingMode} />
         <Row label="Remote consent" value={settings.remoteProcessingConsent ? 'Enabled' : 'Disabled'} />

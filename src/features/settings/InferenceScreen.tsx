@@ -133,10 +133,10 @@ export default function InferenceScreen() {
       <Panel>
         <Text style={commonStyles.label}>Transcription provider</Text>
         <ActionButton
-          label={settings.transcriptionProvider === 'device-adapter' ? 'On-device adapter · selected' : 'Use on-device adapter'}
+          label={settings.transcriptionProvider === 'automatic' ? 'Automatic · selected' : 'Use automatic routing'}
           onPress={async () => {
-            settings.update({ transcriptionProvider: 'device-adapter' });
-            await settingsRepository.save({ transcriptionProvider: 'device-adapter' });
+            settings.update({ transcriptionProvider: 'automatic' });
+            await settingsRepository.save({ transcriptionProvider: 'automatic' });
           }}
         />
         <ActionButton

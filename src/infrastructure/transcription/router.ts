@@ -10,6 +10,7 @@ export class TranscriptionRouter implements TranscriptionProvider {
   constructor(
     private readonly providers: readonly TranscriptionProvider[],
     private readonly remoteUsage?: RemoteUsagePolicy,
+    private readonly timeoutMs = 120_000,
   ) {}
 
   async isAvailable(): Promise<boolean> {
@@ -32,7 +33,16 @@ export class TranscriptionRouter implements TranscriptionProvider {
         continue;
       }
       try {
-        return await provider.transcribe(input);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+        const cancel = () => controller.abort();
+        input.signal?.addEventListener('abort', cancel, { once: true });
+        try {
+          return await provider.transcribe({ ...input, signal: controller.signal });
+        } finally {
+          clearTimeout(timeout);
+          input.signal?.removeEventListener('abort', cancel);
+        }
       } catch (error) {
         lastError = error;
         if (error instanceof GearXError && (

@@ -21,8 +21,8 @@ Automated gates pass and Android physical plus iOS simulator/device matrix is co
 ## Dependencies
 Testing, privacy, product, all tasks.
 ## Open implementation decisions
-EAS project credentials, store metadata, native transcription module, crash reporting with redaction.
+EAS project credentials, store metadata, production backend/authentication, optional offline speech pack, and crash reporting with redaction.
 ## Verification method
 Release checklist with command output and device evidence.
 
-Current status: validation passes with 18 domain/SQLite/static tests and 20 Jest UI/provider/runtime/pipeline tests. Expo SDK dependency compatibility, public config, a rendered Metro web preview with SQLite WASM and hardware WebGL support, an HTTP-200 offline Metro launch, and Android Metro/Hermes exports pass. The real 3D celestial gear renderer bundles 1,248 modules into a 6.25 MB Hermes bundle. The production audit must be refreshed after the 3D dependency addition; the earlier Expo 53/React Native 0.79 audit reported major-upgrade-only remediations. Physical Android/iOS GPU and capture verification, the SDK upgrade, and native transcription selection remain open. No device verification has been claimed.
+Current status: validation passes with 19 domain/SQLite/static tests and 27 Jest UI/provider/runtime/pipeline tests. Expo SDK dependency compatibility and public config/native speech plugin resolution pass. Earlier rendered Metro web preview, HTTP-200 offline launch, and Android Hermes export evidence remains recorded for the 3D build. Native recorded-file transcription, capture, and GPU behavior still require physical Android/iOS verification; a production backend/auth boundary is not deployed; the dependency security audit and coordinated SDK upgrade remain open. No device verification has been claimed.

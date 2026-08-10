@@ -11,9 +11,9 @@ Claims of end-to-end encryption or encrypted SQLite until implemented and verifi
 - I can remove recordings, sessions, insights, or all data.
 - I can understand exactly what Gear X stores.
 ## Functional requirements
-Separate microphone and remote consent; local default; retention settings; redacted production logs; backend-issued ephemeral voice tokens; export/delete controls.
+Separate microphone and remote consent; local-first default; per-capability cloud toggles and daily ceiling; retention settings; redacted production logs; backend-issued ephemeral tokens; export/delete controls.
 ## Technical requirements
-Consent gate wraps remote adapters; no long-lived keys in client/env bundle; database failures are typed; exports require an explicit action.
+Consent gate wraps remote adapters; usage records contain only provider, capability, and time; no long-lived keys in client/env bundle; database failures are typed; exports require an explicit action.
 ## Failure states
 Missing consent blocks the call, failed deletion preserves an error state, and unavailable secure token flow disables remote voice.
 ## Privacy implications

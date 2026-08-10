@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-In progress. See `RELEASE_STATUS.md`. AI capability routing and production transcription are active milestone work; backend deployment, physical Android/iOS capture/transcription/GPU checks, dependency audit, and the coordinated SDK upgrade remain blockers.
+In progress. See `RELEASE_STATUS.md`. Automated AI runtime validation, Expo dependency compatibility, and native plugin config pass. Backend deployment/authentication, physical Android/iOS capture/transcription/GPU checks, dependency audit, store metadata/credentials, and the coordinated SDK upgrade remain blockers.

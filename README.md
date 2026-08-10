@@ -34,8 +34,8 @@ Router is the orchestrator, not a knowledge-processing god object. The eight age
 
 - Node.js 20 or 22 LTS (Node 24 is not the Expo 53 release baseline)
 - npm
-- Expo Go for capture/navigation checks, or an Expo development build for future native transcription
-- Ollama for optional local inference
+- Expo Go for navigation/web checks, or an Expo development/store build for native transcription
+- Ollama only for optional Developer-mode inference
 
 ## Setup
 
@@ -46,7 +46,7 @@ npm test
 npm start
 ```
 
-For Ollama:
+For Developer-mode Ollama:
 
 ```bash
 ollama serve

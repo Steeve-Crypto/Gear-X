@@ -6,15 +6,19 @@
 - [ ] `npm run lint` passes.
 - [ ] `npm run validate` passes.
 - [ ] Expo starts without route/config errors.
+- [x] Internal Android development-client APK profile is configured.
+- [ ] Expo account is authenticated and the app is linked to an EAS project.
+- [ ] Android development APK builds and installs.
 - [ ] Android physical-device microphone and audio recording pass.
 - [ ] iOS simulator or physical-device navigation and permissions pass.
 - [ ] SQLite survives process restart.
 - [ ] Interrupted recording and app resume are verified.
 - [ ] Reduced motion and low-performance mode are verified.
-- [ ] Ollama reachable and unreachable states are verified.
+- [ ] Developer-mode Ollama reachable and unreachable states are verified.
 - [ ] Remote consent denial is verified.
 - [ ] Export content and delete-all behavior are verified.
 - [ ] No simulated transcript exists in production paths.
 - [ ] Secret scan is clean.
 - [ ] Store disclosures state that local SQLite is not application-level encrypted.
-- [ ] Native transcription or secure backend transcription is selected and device-tested.
+- [x] Native OS transcription is selected and implemented.
+- [ ] Native recorded-file transcription is device-tested across supported and unsupported configurations.

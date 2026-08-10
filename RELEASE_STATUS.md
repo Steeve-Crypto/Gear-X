@@ -11,10 +11,12 @@ Gear X is not yet cleared for App Store or Google Play submission.
 - Native Apple/Android recorded-file speech bridge, optional consented multipart backend transcription, and Developer-only Ollama/local Whisper adapters. Production code never fabricates transcripts.
 - Local FTS5 vault search where available, indexed lexical fallback elsewhere, local evidence ranking, and optional minimal-context synthesis.
 - Separate cloud transcription/intelligence switches and a durable daily request limit. Usage records contain no transcript, prompt, response, or audio.
+- Expo development-client support and internal Android APK build profiles.
 
 ## Current release blockers
 
 - No production Gear X backend URL, mobile session/authentication service, xAI server configuration, rate limits, budget, or operational monitoring has been deployed or verified.
+- EAS is not authenticated or linked to a project on this machine, so the Android development APK cannot yet be submitted to Expo's build service.
 - Native recorded-file transcription and 3D GPU/capture behavior have not been exercised on physical iOS and Android devices. The native bridge requires a development/store build and does not run in Expo Go.
 - Recorded-file speech support varies by Android version, installed speech service, locale pack, and device; a cloud fallback is required for broad reliability.
 - The Expo SDK/dependency security and compatibility upgrade remains open.

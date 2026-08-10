@@ -70,6 +70,16 @@ npm run validate
 
 `validate` runs type checking, tests, and lint. Native microphone, persistence-after-restart, background interruption, and iOS/Android behavior still require the manual matrix in [release readiness](specs/release-readiness.md).
 
+## Android development build
+
+Native transcription requires a development/store build and cannot run in Expo Go. After signing into Expo and linking this repository to an EAS project:
+
+```bash
+npx eas-cli@latest build --platform android --profile development
+```
+
+The development profile produces an internally distributed APK for physical-device verification. No provider credentials belong in the build.
+
 ## Privacy
 
 - Local processing is the default.
@@ -83,7 +93,7 @@ See [privacy details](docs/PRIVACY.md) and [provider boundaries](specs/inference
 
 ## Known limitations
 
-- A production offline STT engine is not bundled in managed Expo. The adapter boundary is ready for a native Whisper/Moonshine-compatible module.
+- Native OS recorded-file speech is integrated but still requires physical-device format and locale verification. Unsupported devices need the optional production backend fallback.
 - Secure share-to-file export requires a platform file/share adapter; the current UI prepares selectable versioned JSON.
 - SQLCipher/platform-wrapped database encryption is not yet implemented.
 - Physical-device verification and store release configuration remain.

@@ -11,7 +11,7 @@ Declaring production-ready based on simulator-only validation.
 ## Functional requirements
 Clean install, typecheck, lint, tests, Expo launch, route smoke, persistence restart, consent, deletion/export, unreachable-provider behavior, and secret scan.
 ## Technical requirements
-No broken imports/routes, unresolved migrations, committed secrets, or production simulated transcripts.
+No broken imports/routes, unresolved migrations, committed secrets, or production simulated transcripts. Native verification uses an internal development-client APK built from the committed EAS development profile.
 ## Failure states
 Any critical data-loss, consent bypass, crash, migration failure, or inaccessible primary action blocks release.
 ## Privacy implications
@@ -21,8 +21,8 @@ Automated gates pass and Android physical plus iOS simulator/device matrix is co
 ## Dependencies
 Testing, privacy, product, all tasks.
 ## Open implementation decisions
-EAS project credentials, store metadata, production backend/authentication, optional offline speech pack, and crash reporting with redaction.
+EAS account/project linkage and Android signing credentials, store metadata, production backend/authentication, optional offline speech pack, and crash reporting with redaction.
 ## Verification method
 Release checklist with command output and device evidence.
 
-Current status: validation passes with 19 domain/SQLite/static tests and 27 Jest UI/provider/runtime/pipeline tests. Expo SDK dependency compatibility and public config/native speech plugin resolution pass. Earlier rendered Metro web preview, HTTP-200 offline launch, and Android Hermes export evidence remains recorded for the 3D build. Native recorded-file transcription, capture, and GPU behavior still require physical Android/iOS verification; a production backend/auth boundary is not deployed; the dependency security audit and coordinated SDK upgrade remain open. No device verification has been claimed.
+Current status: validation passes with 19 domain/SQLite/static tests and 27 Jest UI/provider/runtime/pipeline tests. Expo SDK dependency compatibility and public config/native speech plugin resolution pass. `expo-dev-client` and internal Android APK profiles are configured. EAS submission is blocked because this machine is not signed into an Expo account and the app is not linked to an EAS project. Native recorded-file transcription, capture, and GPU behavior still require physical Android/iOS verification; a production backend/auth boundary is not deployed; the dependency security audit and coordinated SDK upgrade remain open. No device verification has been claimed.

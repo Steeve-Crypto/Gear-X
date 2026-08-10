@@ -94,8 +94,9 @@ export async function searchInsights(query: string, limit = 12): Promise<Insight
   const database = await getDb();
   const tokens = [...new Set(query.toLowerCase().match(/[a-z0-9]{2,}/g) ?? [])].slice(0, 8);
   if (!tokens.length) return [];
-  const clauses = tokens.map(() => 'LOWER(content) LIKE ?').join(' OR ');
-  const rows = await database.getAllAsync<{
+  const rowFields = `i.id, i.session_id, i.type, i.content, i.source_timestamp,
+    i.confidence, i.linked_insight_ids, i.created_at`;
+  let rows: {
     id: string;
     session_id: string | null;
     type: string;
@@ -104,13 +105,34 @@ export async function searchInsights(query: string, limit = 12): Promise<Insight
     confidence: number;
     linked_insight_ids: string;
     created_at: number;
-  }>(
-    `SELECT * FROM insights
-     WHERE archived = 0 AND (${clauses})
-     ORDER BY pinned DESC, confidence DESC, created_at DESC
-     LIMIT ?`,
-    [...tokens.map((token) => `%${token}%`), limit]
+  }[] | null = null;
+  const hasFts = await database.getFirstAsync<{ name: string }>(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'insights_fts'",
   );
+  if (hasFts) {
+    try {
+      rows = await database.getAllAsync(
+        `SELECT ${rowFields} FROM insights_fts
+         JOIN insights i ON i.rowid = insights_fts.rowid
+         WHERE insights_fts MATCH ? AND i.archived = 0
+         ORDER BY bm25(insights_fts), i.pinned DESC, i.confidence DESC
+         LIMIT ?`,
+        [tokens.map((token) => `"${token}"*`).join(' OR '), limit],
+      );
+    } catch {
+      rows = null;
+    }
+  }
+  const clauses = tokens.map(() => 'LOWER(content) LIKE ?').join(' OR ');
+  if (!rows) {
+    rows = await database.getAllAsync(
+      `SELECT * FROM insights
+       WHERE archived = 0 AND (${clauses})
+       ORDER BY pinned DESC, confidence DESC, created_at DESC
+       LIMIT ?`,
+      [...tokens.map((token) => `%${token}%`), limit],
+    );
+  }
 
   return rows.map((r) => ({
     id: r.id,

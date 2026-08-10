@@ -38,3 +38,9 @@ test('legacy upgrade declarations preserve required insight columns', () => {
   }
   assert.doesNotMatch(source, /DROP TABLE|DELETE FROM insights/);
 });
+
+test('search migration provides FTS5 with a safe indexed fallback', () => {
+  assert.match(source, /CREATE VIRTUAL TABLE IF NOT EXISTS insights_fts USING fts5/);
+  assert.match(source, /idx_insights_search_fallback/);
+  assert.match(source, /Some SQLite builds omit FTS5/);
+});

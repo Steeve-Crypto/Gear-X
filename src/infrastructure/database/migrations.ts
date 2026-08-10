@@ -5,6 +5,7 @@ interface Migration {
   version: number;
   name: string;
   sql: string;
+  optionalSql?: string;
 }
 
 const migrations: Migration[] = [
@@ -157,6 +158,34 @@ const migrations: Migration[] = [
         ON agent_runs(idempotency_key) WHERE idempotency_key IS NOT NULL;
     `,
   },
+  {
+    version: 2,
+    name: 'local_search_index',
+    sql: `CREATE INDEX IF NOT EXISTS idx_insights_search_fallback
+      ON insights(archived, pinned DESC, confidence DESC, created_at DESC);`,
+    optionalSql: `
+      CREATE VIRTUAL TABLE IF NOT EXISTS insights_fts USING fts5(
+        content,
+        type,
+        content='insights',
+        content_rowid='rowid'
+      );
+
+      CREATE TRIGGER IF NOT EXISTS insights_fts_insert AFTER INSERT ON insights BEGIN
+        INSERT INTO insights_fts(rowid, content, type) VALUES (new.rowid, new.content, new.type);
+      END;
+      CREATE TRIGGER IF NOT EXISTS insights_fts_delete AFTER DELETE ON insights BEGIN
+        INSERT INTO insights_fts(insights_fts, rowid, content, type)
+        VALUES ('delete', old.rowid, old.content, old.type);
+      END;
+      CREATE TRIGGER IF NOT EXISTS insights_fts_update AFTER UPDATE ON insights BEGIN
+        INSERT INTO insights_fts(insights_fts, rowid, content, type)
+        VALUES ('delete', old.rowid, old.content, old.type);
+        INSERT INTO insights_fts(rowid, content, type) VALUES (new.rowid, new.content, new.type);
+      END;
+      INSERT INTO insights_fts(insights_fts) VALUES ('rebuild');
+    `,
+  },
 ];
 
 async function ensureColumn(
@@ -214,6 +243,13 @@ export async function migrateDatabase(db: SQLite.SQLiteDatabase): Promise<number
     for (const migration of migrations.filter((item) => item.version > current)) {
       await db.withTransactionAsync(async () => {
         await db.execAsync(migration.sql);
+        if (migration.optionalSql) {
+          try {
+            await db.execAsync(migration.optionalSql);
+          } catch {
+            // Some SQLite builds omit FTS5. The indexed lexical fallback remains available.
+          }
+        }
         await upgradeLegacyColumns(db);
         await db.runAsync(
           'INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)',

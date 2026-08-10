@@ -186,6 +186,20 @@ const migrations: Migration[] = [
       INSERT INTO insights_fts(insights_fts) VALUES ('rebuild');
     `,
   },
+  {
+    version: 3,
+    name: 'remote_usage_budget',
+    sql: `
+      CREATE TABLE IF NOT EXISTS provider_usage (
+        id TEXT PRIMARY KEY NOT NULL,
+        provider_id TEXT NOT NULL,
+        capability TEXT NOT NULL,
+        started_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_provider_usage_started
+        ON provider_usage(started_at DESC);
+    `,
+  },
 ];
 
 async function ensureColumn(

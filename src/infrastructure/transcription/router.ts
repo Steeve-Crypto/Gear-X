@@ -1,12 +1,16 @@
 import { GearXError } from '../../domain/errors';
 import { TranscriptionInput, TranscriptionProvider, TranscriptionResult } from './types';
+import { RemoteUsagePolicy } from '../providers/remoteUsagePolicy';
 
 export class TranscriptionRouter implements TranscriptionProvider {
   id = 'transcription-router';
   name = 'Transcription router';
   remote = false;
 
-  constructor(private readonly providers: readonly TranscriptionProvider[]) {}
+  constructor(
+    private readonly providers: readonly TranscriptionProvider[],
+    private readonly remoteUsage?: RemoteUsagePolicy,
+  ) {}
 
   async isAvailable(): Promise<boolean> {
     for (const provider of this.providers) {
@@ -20,6 +24,13 @@ export class TranscriptionRouter implements TranscriptionProvider {
     for (const provider of this.providers) {
       if (input.signal?.aborted) throw new GearXError('TRANSCRIPTION_FAILED', 'Cancelled');
       if (!(await provider.isAvailable())) continue;
+      if (provider.remote && this.remoteUsage && !(await this.remoteUsage.reserve(
+        provider.id,
+        'transcription',
+      ))) {
+        lastError = new GearXError('PROVIDER_UNAVAILABLE', 'The daily cloud request limit was reached.');
+        continue;
+      }
       try {
         return await provider.transcribe(input);
       } catch (error) {

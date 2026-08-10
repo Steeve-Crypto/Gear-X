@@ -1,6 +1,7 @@
 import { AICapability } from '../../domain/aiCapabilities';
 import { GearXError } from '../../domain/errors';
 import { InferenceProvider, InferenceRequest } from './types';
+import { RemoteUsagePolicy } from '../providers/remoteUsagePolicy';
 
 export class CapabilityInferenceRouter implements InferenceProvider {
   id = 'capability-router';
@@ -10,6 +11,7 @@ export class CapabilityInferenceRouter implements InferenceProvider {
   constructor(
     private readonly providers: readonly InferenceProvider[],
     private readonly timeoutMs = 12_000,
+    private readonly remoteUsage?: RemoteUsagePolicy,
   ) {}
 
   private candidates(capability?: AICapability) {
@@ -34,6 +36,13 @@ export class CapabilityInferenceRouter implements InferenceProvider {
         throw new GearXError('TIMEOUT', 'Inference was cancelled.');
       }
       if (provider.metadata?.configured === false || !(await provider.isAvailable(request.signal))) {
+        continue;
+      }
+      if (provider.remote && this.remoteUsage && !(await this.remoteUsage.reserve(
+        provider.id,
+        request.capability ?? 'text-inference',
+      ))) {
+        lastError = new GearXError('PROVIDER_UNAVAILABLE', 'The daily cloud request limit was reached.');
         continue;
       }
       const controller = new AbortController();

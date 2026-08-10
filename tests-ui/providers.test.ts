@@ -183,6 +183,24 @@ describe('inference provider selection', () => {
     expect(unsupported.generate).not.toHaveBeenCalled();
   });
 
+  test('daily budget blocks remote calls and preserves local fallback', async () => {
+    const remote: InferenceProvider = {
+      id: 'remote', name: 'remote', remote: true,
+      isAvailable: async () => true,
+      generate: jest.fn(async () => 'remote answer'),
+    };
+    const local: InferenceProvider = {
+      id: 'rules-refiner', name: 'local', remote: false,
+      isAvailable: async () => true,
+      generate: jest.fn(async () => 'local answer'),
+    };
+    const router = new CapabilityInferenceRouter([remote, local], 1_000, {
+      reserve: async () => false,
+    });
+    await expect(router.generate({ system: 's', prompt: 'p' })).resolves.toBe('local answer');
+    expect(remote.generate).not.toHaveBeenCalled();
+  });
+
   test('migrates legacy modes to safe named modes', () => {
     expect(normalizeProcessingMode('local')).toBe('private');
     expect(normalizeProcessingMode('remote')).toBe('quality');

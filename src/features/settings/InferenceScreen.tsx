@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Switch, Text, View } from 'react-native';
 import { ActionButton, ChoiceChip, Field, Panel, Screen, commonStyles } from '../../components/primitives';
 import { OllamaProvider } from '../../infrastructure/inference/ollama';
 import { settingsRepository } from '../../repositories/settingsRepository';
@@ -20,6 +20,7 @@ export default function InferenceScreen() {
   const [model, setModel] = useState(settings.ollamaModel);
   const [transcriptionEndpoint, setTranscriptionEndpoint] = useState(settings.transcriptionEndpoint);
   const [result, setResult] = useState('');
+  const [dailyLimit, setDailyLimit] = useState(String(settings.dailyCloudRequestLimit));
   const save = async () => {
     const patch = {
       ollamaEndpoint: endpoint.trim(),
@@ -56,6 +57,36 @@ export default function InferenceScreen() {
         </View>
         <Text style={commonStyles.body}>
           {modes.find((mode) => mode.id === settings.processingMode)?.description}
+        </Text>
+      </Panel>
+      <Panel>
+        <Text style={commonStyles.meta}>CLOUD COST CONTROLS</Text>
+        <View style={commonStyles.spread}>
+          <Text style={commonStyles.label}>Transcription fallback</Text>
+          <Switch value={settings.cloudTranscriptionEnabled} onValueChange={async (value) => {
+            settings.update({ cloudTranscriptionEnabled: value });
+            await settingsRepository.save({ cloudTranscriptionEnabled: value });
+          }} />
+        </View>
+        <View style={commonStyles.spread}>
+          <Text style={commonStyles.label}>Intelligence refinement</Text>
+          <Switch value={settings.cloudIntelligenceEnabled} onValueChange={async (value) => {
+            settings.update({ cloudIntelligenceEnabled: value });
+            await settingsRepository.save({ cloudIntelligenceEnabled: value });
+          }} />
+        </View>
+        <Text style={commonStyles.label}>Daily cloud request limit</Text>
+        <Field value={dailyLimit} onChangeText={setDailyLimit} keyboardType="number-pad"
+          accessibilityLabel="Daily cloud request limit" />
+        <ActionButton label="Save cloud limit" onPress={async () => {
+          const value = Math.max(0, Math.min(500, Number.parseInt(dailyLimit, 10) || 0));
+          settings.update({ dailyCloudRequestLimit: value });
+          await settingsRepository.save({ dailyCloudRequestLimit: value });
+          setDailyLimit(String(value));
+          setResult(value ? `Cloud requests limited to ${value} per day.` : 'Cloud processing disabled by a zero request limit.');
+        }} />
+        <Text style={commonStyles.body}>
+          These controls never override remote-processing consent. Usage records contain only provider, capability, and time.
         </Text>
       </Panel>
       <Panel>

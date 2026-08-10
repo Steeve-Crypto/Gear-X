@@ -19,6 +19,7 @@ test('SQLite migration defines every required durable table', async () => {
     'thread_insights',
     'agent_runs',
     'provider_runs',
+    'provider_usage',
   ];
   for (const table of required) {
     assert.match(source, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`), table);

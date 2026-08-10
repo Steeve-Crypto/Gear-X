@@ -12,6 +12,7 @@ import {
 import { TranscriptionProvider } from '../infrastructure/transcription/types';
 import { TranscriptionRouter } from '../infrastructure/transcription/router';
 import Constants from 'expo-constants';
+import { usageRepository } from '../repositories/usageRepository';
 
 function backendUrl(): string {
   const value = Constants.expoConfig?.extra?.gearXBackendUrl;
@@ -44,14 +45,21 @@ export function createTranscriptionProvider(
       () => settings.remoteProcessingConsent,
     )
     : null;
-  if (settings.processingMode === 'private') return new TranscriptionRouter([device]);
+  const usage = {
+    reserve: (providerId: string, capability: string) => usageRepository.reserveRemote(
+      providerId,
+      capability,
+      settings.dailyCloudRequestLimit,
+    ),
+  };
+  if (settings.processingMode === 'private') return new TranscriptionRouter([device], usage);
   if (settings.processingMode === 'quality') {
-    return new TranscriptionRouter([...(cloud ? [cloud] : []), device]);
+    return new TranscriptionRouter([...(cloud ? [cloud] : []), device], usage);
   }
   if (settings.processingMode === 'developer') {
-    return new TranscriptionRouter([device, ...(localWhisper ? [localWhisper] : []), ...(cloud ? [cloud] : [])]);
+    return new TranscriptionRouter([device, ...(localWhisper ? [localWhisper] : []), ...(cloud ? [cloud] : [])], usage);
   }
-  return new TranscriptionRouter([device, ...(cloud ? [cloud] : [])]);
+  return new TranscriptionRouter([device, ...(cloud ? [cloud] : [])], usage);
 }
 
 export function createInferenceProvider(settings: AppSettings): InferenceProvider {
@@ -72,5 +80,11 @@ export function createInferenceProvider(settings: AppSettings): InferenceProvide
   if (settings.processingMode === 'developer') {
     providers.push(new OllamaProvider(settings.ollamaEndpoint, settings.ollamaModel));
   }
-  return new CapabilityInferenceRouter(providers);
+  return new CapabilityInferenceRouter(providers, 12_000, {
+    reserve: (providerId, capability) => usageRepository.reserveRemote(
+      providerId,
+      capability,
+      settings.dailyCloudRequestLimit,
+    ),
+  });
 }

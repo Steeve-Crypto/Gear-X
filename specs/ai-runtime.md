@@ -58,7 +58,7 @@ Primary references: [Apple Speech recorded buffers and files](https://developer.
 - Provider fallback is ordered, bounded, abortable, and records availability/failure without transcript or prompt content.
 - Existing deterministic agent paths must remain functional when no text model is available.
 - Retrieval always executes locally before optional synthesis and exposes its evidence.
-- Remote processing has separate feature toggles, a daily request ceiling, and no automatic retry after budget exhaustion.
+- Remote processing has separate feature toggles, a durable daily request ceiling, and no automatic retry after budget exhaustion.
 
 ## Technical requirements
 - Provider metadata declares capabilities, locality, configuration, availability, and estimated cost class.

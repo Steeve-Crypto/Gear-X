@@ -16,6 +16,17 @@ const toSession = (row: Record<string, unknown>): CaptureSession => ({
   updatedAt: Number(row.updated_at),
 });
 
+export interface SessionDetailData {
+  session: CaptureSession;
+  segments: TranscriptSegment[];
+  insights: Record<string, unknown>[];
+  summaries: Record<string, unknown>[];
+  questions: Record<string, unknown>[];
+  threads: Record<string, unknown>[];
+  agentRuns: Record<string, unknown>[];
+  providerRuns: Record<string, unknown>[];
+}
+
 export const sessionRepository = {
   async create(session: CaptureSession): Promise<void> {
     try {
@@ -151,6 +162,37 @@ export const sessionRepository = {
       confidence: row.confidence == null ? null : Number(row.confidence),
       createdAt: Number(row.created_at),
     }));
+  },
+
+  async details(id: string): Promise<SessionDetailData | null> {
+    const session = await this.get(id);
+    if (!session) return null;
+    const db = await openAppDatabase();
+    const [segments, insights, summaries, questions, threads, agentRuns, providerRuns] = await Promise.all([
+      this.segments(id),
+      db.getAllAsync<Record<string, unknown>>(
+        'SELECT * FROM insights WHERE session_id = ? ORDER BY created_at', [id],
+      ),
+      db.getAllAsync<Record<string, unknown>>(
+        'SELECT * FROM summaries WHERE session_id = ? ORDER BY created_at', [id],
+      ),
+      db.getAllAsync<Record<string, unknown>>(
+        'SELECT * FROM questions WHERE session_id = ? ORDER BY created_at', [id],
+      ),
+      db.getAllAsync<Record<string, unknown>>(
+        `SELECT DISTINCT t.* FROM threads t
+         JOIN thread_insights ti ON ti.thread_id = t.id
+         JOIN insights i ON i.id = ti.insight_id
+         WHERE i.session_id = ? ORDER BY t.updated_at DESC`, [id],
+      ),
+      db.getAllAsync<Record<string, unknown>>(
+        'SELECT * FROM agent_runs WHERE session_id = ? ORDER BY started_at', [id],
+      ),
+      db.getAllAsync<Record<string, unknown>>(
+        'SELECT * FROM provider_runs WHERE session_id = ? ORDER BY started_at', [id],
+      ),
+    ]);
+    return { session, segments, insights, summaries, questions, threads, agentRuns, providerRuns };
   },
 
   async remove(id: string): Promise<void> {

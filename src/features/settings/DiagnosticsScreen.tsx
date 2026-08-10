@@ -1,75 +1,79 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { ActionButton, Panel, Screen, commonStyles } from '../../components/primitives';
-import { getDatabaseVersion } from '../../infrastructure/database';
-import { knowledgeRepository } from '../../repositories/knowledgeRepository';
+import { collectDiagnostics, DiagnosticsSnapshot } from '../../services/diagnostics';
 import { useSettingsStore } from '../../state/settingsStore';
 import { useSessionStore } from '../../state/sessionStore';
-import { runRepository } from '../../repositories/runRepository';
-import { usageRepository } from '../../repositories/usageRepository';
 
 export default function DiagnosticsScreen() {
   const settings = useSettingsStore();
   const lastError = useSessionStore((state) => state.lastError);
-  const [version, setVersion] = useState(0);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [runs, setRuns] = useState<Record<string, unknown>[]>([]);
+  const [snapshot, setSnapshot] = useState<DiagnosticsSnapshot | null>(null);
+  const [loading, setLoading] = useState(true);
   const [exportText, setExportText] = useState('');
-  const [storageBytes, setStorageBytes] = useState(0);
-  const [cloudUses, setCloudUses] = useState(0);
-  useEffect(() => {
-    getDatabaseVersion().then(setVersion).catch(() => setVersion(-1));
-    knowledgeRepository.counts().then(setCounts).catch(() => setCounts({}));
-    runRepository.recentAgentRuns().then(setRuns).catch(() => setRuns([]));
-    knowledgeRepository.exportAll().then((data) => {
-      setStorageBytes(JSON.stringify(data).length * 2);
-    }).catch(() => setStorageBytes(0));
-    usageRepository.todayCount().then(setCloudUses).catch(() => setCloudUses(0));
-  }, []);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setSnapshot(await collectDiagnostics(settings));
+    setLoading(false);
+  }, [settings]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const counts = snapshot?.counts ?? {};
   return (
     <Screen title="Diagnostics" eyebrow="INTERNAL HEALTH">
       <Panel>
         <Row label="App version" value="0.1.0" />
-        <Row label="Database version" value={version < 0 ? 'Migration error' : String(version)} />
+        <Row label="Database schema" value={!snapshot ? 'Checking…' : snapshot.databaseVersion < 0
+          ? `Migration error · latest ${snapshot.latestSchemaVersion}`
+          : `${snapshot.databaseVersion} / ${snapshot.latestSchemaVersion}`} />
         <Row label="Sessions" value={String(counts.sessions ?? 0)} />
         <Row label="Insights" value={String(counts.insights ?? 0)} />
         <Row label="Threads" value={String(counts.threads ?? 0)} />
         <Row label="Open-loop records" value={String(counts.questions ?? 0)} />
-        <Row label="Approximate export size" value={`${Math.ceil(storageBytes / 1024)} KB`} />
-        <Row label="Cloud requests today" value={`${cloudUses} / ${settings.dailyCloudRequestLimit}`} />
+        <Row label="Approximate export size" value={`${Math.ceil((snapshot?.approximateExportBytes ?? 0) / 1024)} KB`} />
+        <Row label="Cloud requests today" value={`${snapshot?.cloudUsesToday ?? 0} / ${settings.dailyCloudRequestLimit}`} />
       </Panel>
+
       <Panel>
-        <Text style={commonStyles.meta}>RECENT AGENT RUNS</Text>
-        {runs.length ? runs.map((run, index) => (
-          <Text key={`${String(run.agent_id)}-${index}`} style={commonStyles.body}>
-            {String(run.agent_id)} · {String(run.status)}
-            {run.duration_ms == null ? '' : ` · ${String(run.duration_ms)} ms`}
-          </Text>
-        )) : <Text style={commonStyles.body}>No recorded runs yet.</Text>}
+        <Text style={commonStyles.meta}>PROVIDER HEALTH</Text>
+        <Row label="Transcription" value={loading ? 'Checking…' : availability(snapshot?.transcriptionAvailable)} />
+        <Row label="Intelligence" value={loading ? 'Checking…' : availability(snapshot?.inferenceAvailable)} />
+        <Row label="Mobile backend" value={snapshot?.backendConfigured ? 'Configured' : 'Not configured'} />
+        {snapshot?.developerEndpoint ? <Row label="Developer endpoint" value={snapshot.developerEndpoint} /> : null}
       </Panel>
-      <ActionButton label="Prepare diagnostics export" onPress={() => setExportText(JSON.stringify({
-        format: 'gear-x-diagnostics',
-        version: 1,
-        createdAt: new Date().toISOString(),
-        databaseVersion: version,
-        counts,
-        approximateExportBytes: storageBytes,
-        providers: {
-          inference: settings.ollamaModel,
-          transcription: settings.transcriptionProvider,
-          processing: settings.processingMode,
-          remoteConsent: settings.remoteProcessingConsent,
-        },
-        recentAgentRuns: runs,
-        lastError,
-      }, null, 2))} />
+
+      <RunPanel title="RECENT AGENT RUNS" runs={snapshot?.recentAgentRuns ?? []}
+        label={(run) => String(run.agent_id)} />
+      <RunPanel title="RECENT PROVIDER RUNS" runs={snapshot?.recentProviderRuns ?? []}
+        label={(run) => `${String(run.provider_id)} · ${String(run.operation)} · ${run.remote ? 'remote' : 'local'}`} />
+
+      <ActionButton label={loading ? 'Refreshing…' : 'Refresh diagnostics'} disabled={loading}
+        onPress={() => void load()} />
+      <ActionButton label="Prepare diagnostics export" disabled={!snapshot} onPress={() => {
+        if (!snapshot) return;
+        setExportText(JSON.stringify({
+          format: 'gear-x-diagnostics',
+          version: 2,
+          createdAt: new Date().toISOString(),
+          ...snapshot,
+          providers: {
+            inferenceModel: settings.processingMode === 'developer' ? settings.ollamaModel : null,
+            transcription: settings.transcriptionProvider,
+            processing: settings.processingMode,
+            remoteConsent: settings.remoteProcessingConsent,
+          },
+          lastError,
+        }, null, 2));
+      }} />
       {exportText ? <Panel><Text selectable style={commonStyles.body}>{exportText}</Text></Panel> : null}
+
       <Panel>
         <Row label="AI runtime" value={settings.processingMode === 'developer'
           ? `Developer · Ollama ${settings.ollamaModel}`
           : `${settings.processingMode} · deterministic local baseline`} />
-        <Row label="Transcription" value={settings.transcriptionProvider} />
-        <Row label="Processing" value={settings.processingMode} />
+        <Row label="Transcription selection" value={settings.transcriptionProvider} />
         <Row label="Remote consent" value={settings.remoteProcessingConsent ? 'Enabled' : 'Disabled'} />
       </Panel>
       <Panel>
@@ -78,6 +82,27 @@ export default function DiagnosticsScreen() {
       </Panel>
     </Screen>
   );
+}
+
+function availability(value: boolean | undefined) {
+  return value ? 'Available' : 'Unavailable';
+}
+
+function RunPanel({ title, runs, label }: {
+  title: string;
+  runs: Record<string, unknown>[];
+  label: (run: Record<string, unknown>) => string;
+}) {
+  return <Panel>
+    <Text style={commonStyles.meta}>{title}</Text>
+    {runs.length ? runs.map((run, index) => (
+      <Text key={`${label(run)}-${index}`} style={commonStyles.body}>
+        {label(run)} · {String(run.status)}
+        {run.duration_ms == null ? '' : ` · ${String(run.duration_ms)} ms`}
+        {run.error_code ? ` · ${String(run.error_code)}` : ''}
+      </Text>
+    )) : <Text style={commonStyles.body}>No recorded runs yet.</Text>}
+  </Panel>;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

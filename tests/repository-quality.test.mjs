@@ -75,4 +75,5 @@ test('production source contains no simulated transcript injection or committed 
   const source = (await Promise.all(files.map((file) => readFile(file, 'utf8')))).join('\n');
   assert.doesNotMatch(source, /const\s+simulated|simulatedTranscript|We need to finish the proposal by Friday/);
   assert.doesNotMatch(source, /(xai|openai|anthropic)[_-]?api[_-]?key\s*[:=]\s*['"][^'"]+/i);
+  assert.doesNotMatch(source, /console\.(?:log|warn|error)\s*\(/, 'production logs must not leak user content');
 });

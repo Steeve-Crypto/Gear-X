@@ -14,7 +14,7 @@ import { TranscriptionRouter } from '../infrastructure/transcription/router';
 import Constants from 'expo-constants';
 import { usageRepository } from '../repositories/usageRepository';
 
-function backendUrl(): string {
+export function configuredBackendUrl(): string {
   const value = Constants.expoConfig?.extra?.gearXBackendUrl;
   return typeof value === 'string' ? value.replace(/\/$/, '') : '';
 }
@@ -31,7 +31,7 @@ export function createTranscriptionProvider(
   settings: AppSettings,
 ): TranscriptionProvider {
   const device = new DeviceTranscriptionAdapter(true);
-  const endpoint = backendUrl();
+  const endpoint = configuredBackendUrl();
   const cloud = endpoint && settings.cloudTranscriptionEnabled
     ? new BackendTranscriptionProvider({
       baseUrl: endpoint,
@@ -64,7 +64,7 @@ export function createTranscriptionProvider(
 
 export function createInferenceProvider(settings: AppSettings): InferenceProvider {
   const providers: InferenceProvider[] = [];
-  const endpoint = backendUrl();
+  const endpoint = configuredBackendUrl();
   const cloudAllowed = endpoint
     && settings.processingMode !== 'private'
     && settings.processingMode !== 'developer'

@@ -36,7 +36,6 @@ export const archivistAgent: Agent = {
         },
       };
     } catch (error: unknown) {
-      console.error('[Archivist] Failed:', error);
       return {
         agentId: 'archivist',
         success: false,
@@ -50,8 +49,7 @@ export const archivistAgent: Agent = {
 export async function restoreKnowledge(): Promise<Insight[]> {
   try {
     return await loadAllInsights();
-  } catch (e) {
-    console.warn('[Archivist] Restore failed, starting empty', e);
+  } catch {
     return [];
   }
 }

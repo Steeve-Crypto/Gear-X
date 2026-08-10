@@ -18,7 +18,6 @@ export async function startListening(): Promise<boolean> {
   try {
     const hasPermission = await requestMicrophonePermission();
     if (!hasPermission) {
-      console.warn('Microphone permission denied');
       return false;
     }
 
@@ -35,8 +34,7 @@ export async function startListening(): Promise<boolean> {
 
     recording = newRecording;
     return true;
-  } catch (error) {
-    console.error('Failed to start recording:', error);
+  } catch {
     return false;
   }
 }
@@ -55,8 +53,7 @@ export async function stopListening(): Promise<string | null> {
     });
 
     return uri; // local file URI of the recording
-  } catch (error) {
-    console.error('Failed to stop recording:', error);
+  } catch {
     recording = null;
     return null;
   }

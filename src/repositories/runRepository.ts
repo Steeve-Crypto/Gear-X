@@ -62,4 +62,13 @@ export const runRepository = {
       [limit],
     );
   },
+
+  async recentProviderRuns(limit = 10): Promise<Record<string, unknown>[]> {
+    const db = await openAppDatabase();
+    return db.getAllAsync(
+      `SELECT provider_id, operation, remote, status, duration_ms, error_code, started_at
+       FROM provider_runs ORDER BY started_at DESC LIMIT ?`,
+      [limit],
+    );
+  },
 };

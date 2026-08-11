@@ -14,4 +14,4 @@ Permission, start/pause/stop, processing, empty/error/reduced motion.
 ## Rollback considerations
 Capture service remains independent of the visualization.
 ## Completion status
-In progress: capture controls, status, real session state, agent signals, motion modes, and the palette-preserving React Three Fiber/Expo GL celestial gear body are implemented; physical-device GPU verification remains.
+Implementation complete for locally verifiable scope: capture controls, permission and recorder lifecycle, start/stop pipeline wiring, status, real session state, agent signals, motion modes, and the palette-preserving React Three Fiber/Expo GL celestial gear body are implemented and automated. Physical-device capture and GPU verification remain release gates.

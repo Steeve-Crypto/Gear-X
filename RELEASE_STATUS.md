@@ -24,4 +24,4 @@ Gear X is not yet cleared for App Store or Google Play submission.
 
 ## Verification evidence
 
-`npm run validate` passes on Expo SDK 57.0.12 and React Native 0.86.2: type checking, 19 domain/SQLite/static tests, 32 Jest UI/provider/runtime/pipeline tests, and lint. Expo dependency compatibility, public config/plugin resolution, and all 20 Expo Doctor checks pass. No physical-device, deployed-backend, or store-review result is claimed.
+`npm run validate` passes on Expo SDK 57.0.12 and React Native 0.86.2: type checking, 19 domain/SQLite/static tests, 39 Jest UI/provider/runtime/pipeline tests, and lint. Expo dependency compatibility, public config/plugin resolution, and all 20 Expo Doctor checks pass. No physical-device, deployed-backend, or store-review result is claimed.

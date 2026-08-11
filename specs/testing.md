@@ -10,7 +10,7 @@ Fake snapshots, mocked tests that assert nothing, or claims about unrun platform
 - Maintainers can change routing, persistence, or privacy with fast regression feedback.
 - Release owners can see exactly what remains device-dependent.
 ## Functional requirements
-Cover Router, agents, parsing, ranking, validation, repositories, migrations, state selectors, privacy, session pipeline, deletion, export, and primary UI states.
+Cover Router, agents, parsing, ranking, validation, repositories, migrations, state selectors, privacy consent, destructive confirmation, session pipeline, Orbit start/stop wiring, deletion, versioned export, loop resolution/missing-source behavior, and primary UI states.
 ## Technical requirements
 Deterministic clocks/IDs/providers; isolated SQL.js databases; Jest Expo native mocks; synthetic fixtures; no network in unit tests; validation runs typecheck, Node tests, React Native tests, and lint.
 ## Failure states

@@ -14,4 +14,4 @@ Clean install, validate, Expo launch, route/storage/provider/privacy/device matr
 ## Rollback considerations
 Release tags only after all blocking gates pass.
 ## Completion status
-In progress. See `RELEASE_STATUS.md`. Automated AI runtime validation, Expo dependency compatibility, native plugin config, development-client dependency, and explicit Android/iOS device/iOS Simulator profiles are complete. EAS login/project linkage, Apple signing/device registration, backend deployment/authentication, physical Android/iOS capture/transcription/GPU checks, dependency audit, store metadata/credentials, and the coordinated SDK upgrade remain blockers.
+In progress. See `RELEASE_STATUS.md`. Automated AI runtime validation, the Expo SDK 57 upgrade, dependency compatibility, native plugin config, development-client dependency, audit evidence, and explicit Android/iOS device/iOS Simulator profiles are complete. EAS login/project linkage, Apple signing/device registration, backend deployment/authentication, physical Android/iOS capture/transcription/GPU checks, unresolved upstream audit advisories, and store metadata/credentials remain blockers.

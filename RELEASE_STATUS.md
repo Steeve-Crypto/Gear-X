@@ -19,9 +19,9 @@ Gear X is not yet cleared for App Store or Google Play submission.
 - EAS is not authenticated or linked to a project on this machine, so Android or iOS builds cannot yet be submitted to Expo's build service. Physical iOS builds also require Apple Developer credentials and a registered device.
 - Native recorded-file transcription and 3D GPU/capture behavior have not been exercised on physical iOS and Android devices. The native bridge requires a development/store build and does not run in Expo Go.
 - Recorded-file speech support varies by Android version, installed speech service, locale pack, and device; a cloud fallback is required for broad reliability.
-- The Expo SDK/dependency security and compatibility upgrade remains open.
+- The current Expo SDK 57 compatibility upgrade is complete. The production audit still reports 24 upstream Expo/React Native/Metro toolchain advisories (15 high, 9 moderate, 0 critical); npm's suggested fixes downgrade incompatible framework packages.
 - Local SQLite data is sandboxed but not application-level encrypted.
 
 ## Verification evidence
 
-`npm run validate` passes: type checking, 19 domain/SQLite/static tests, 27 Jest UI/provider/runtime/pipeline tests, and lint. Expo SDK dependency compatibility and public config/plugin resolution also pass. No physical-device, deployed-backend, or store-review result is claimed.
+`npm run validate` passes on Expo SDK 57.0.12 and React Native 0.86.2: type checking, 19 domain/SQLite/static tests, 32 Jest UI/provider/runtime/pipeline tests, and lint. Expo dependency compatibility, public config/plugin resolution, and all 20 Expo Doctor checks pass. No physical-device, deployed-backend, or store-review result is claimed.

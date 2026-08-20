@@ -66,6 +66,7 @@ npm run typecheck
 npm test
 npm run lint
 npm run validate
+npm run test:backend
 ```
 
 `validate` runs type checking, tests, and lint. Native microphone, persistence-after-restart, background interruption, and iOS/Android behavior still require the manual matrix in [release readiness](specs/release-readiness.md).
@@ -87,13 +88,17 @@ npm run build:ios:simulator
 
 No provider credentials belong in any build.
 
+## Production backend
+
+The repository contains the Supabase Auth/Edge Function/Postgres backend required for consented xAI transcription and intelligence. It is intentionally inactive until a dedicated project is deployed and the three public routing/auth-bootstrap variables are configured. Provider and service-role credentials remain Supabase secrets. See [backend deployment](docs/BACKEND_DEPLOYMENT.md).
+
 ## Privacy
 
 - Local processing is the default.
 - Remote adapters are consent-gated.
 - Audio URI retention is opt-in.
 - Transcript content is not intentionally written to production logs.
-- Grok Voice accepts only a backend-issued ephemeral credential and refuses to connect without remote consent.
+- Cloud transcription and intelligence accept only a validated Supabase user JWT plus an explicit consent assertion; xAI credentials never reach the client.
 - JSON export is user-triggered and plaintext; the user must protect it after it leaves the app.
 
 See [privacy details](docs/PRIVACY.md) and [provider boundaries](specs/inference-providers.md).

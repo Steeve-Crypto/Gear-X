@@ -22,4 +22,3 @@ export const useEntitlementStore = create<EntitlementState>((set) => ({
   setMessage: (message) => set({ message, loading: false }),
   markFallback: (fallbackMessage) => set({ fallbackMessage }),
 }));
-

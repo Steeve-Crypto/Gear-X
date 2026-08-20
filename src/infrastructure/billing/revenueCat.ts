@@ -39,4 +39,3 @@ export class RevenueCatBillingProvider implements BillingProvider {
     await RevenueCatUI.presentCustomerCenter();
   }
 }
-

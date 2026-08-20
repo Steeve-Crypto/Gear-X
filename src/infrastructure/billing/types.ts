@@ -11,4 +11,3 @@ export interface BillingProvider {
 export interface EntitlementProvider {
   fetchSnapshot(): Promise<EntitlementSnapshot>;
 }
-

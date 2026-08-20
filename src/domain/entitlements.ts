@@ -35,4 +35,3 @@ export const baselineEntitlement: EntitlementSnapshot = {
 export function hasCloudCapability(snapshot: EntitlementSnapshot, capability: CloudCapability): boolean {
   return snapshot.capabilities.includes(capability);
 }
-

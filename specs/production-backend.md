@@ -37,7 +37,7 @@ Cloud vault storage, uploading a complete vault, paid subscription logic, Ollama
 Missing/expired/invalid authentication, anonymous sign-up disabled, missing consent, malformed JSON or multipart data, unsupported MIME, oversized audio or context, quota or rate exhaustion, provider timeout, provider rejection, malformed provider output, database accounting failure, and network loss.
 
 ## Privacy implications
-Private mode makes no backend call. Balanced and Quality calls transmit only the selected audio or task-scoped context after consent. Supabase retains authentication records and metadata-only usage rows until the user is deleted; usage events expire after 35 days through the supplied cleanup function. xAI processes request content transiently according to the production xAI account settings; Gear X does not store provider content.
+Private mode makes no backend call. Balanced and Quality calls transmit only the selected audio or task-scoped context after consent. Supabase retains authentication records until the user is deleted; a Postgres cron job deletes metadata-only usage rows after 35 days. xAI processes request content transiently according to the production xAI account settings; Gear X does not store provider content.
 
 ## Acceptance criteria
 - Unauthenticated protected requests return structured `UNAUTHORIZED` errors.

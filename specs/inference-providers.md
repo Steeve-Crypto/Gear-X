@@ -24,6 +24,6 @@ Native recorded-file speech, deterministic fallback, task-capability routing, co
 ## Dependencies
 Privacy, settings, errors, agent runtime.
 ## Open implementation decisions
-Production backend deployment/authentication and optional offline whisper.cpp pack. See `specs/ai-runtime.md` for the evaluated runtime decision.
+Production Supabase project deployment and optional offline whisper.cpp pack. The implemented backend contract is defined in `specs/production-backend.md`; deployment remains external until project credentials are supplied.
 ## Verification method
 Provider unit tests, fallback/timeout/budget tests, unreachable Ollama test, consent test, public config scan, and physical-device audio/transcription check.

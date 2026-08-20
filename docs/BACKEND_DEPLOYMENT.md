@@ -4,8 +4,8 @@
 
 - A dedicated Supabase project named GearX. Do not reuse another product's database.
 - Anonymous sign-ins enabled in Supabase Auth.
-- Supabase's anonymous-signup IP rate limit retained at 30/hour or lower. Do not raise it for launch.
-- Approved plan allowances, provider cost estimates, and global daily/monthly budgets. xAI is optional and must not be enabled until those economics are approved.
+- Supabase's anonymous-signup IP rate limit configured at 3/hour per IP or lower after load testing.
+- Free/Pro/Max allowances and per-user ceilings are approved and migrated. Production global daily/monthly budgets still require an explicit operational review; xAI remains disabled.
 - A RevenueCat project, configured store products, product-to-plan mappings, and a random webhook authorization value. See `docs/BILLING_CONFIGURATION.md`.
 - The production web origin, if web access is enabled. Native apps do not require an origin allow-list entry.
 
@@ -20,26 +20,25 @@ npx supabase db push
 npx supabase functions deploy gear-x --project-ref <GEAR_X_PROJECT_REF> --no-verify-jwt --use-api
 ```
 
-`--no-verify-jwt` is intentional: the function verifies every bearer token with Supabase Auth itself so it can return the stable Gear X error contract. There are no public function routes.
+`--no-verify-jwt` is intentional: the function verifies mobile bearer tokens itself so it can return the stable Gear X error contract. The RevenueCat webhook is externally reachable but requires both its configured authorization value and raw-body HMAC signature.
 
 Set these in Supabase Dashboard → Edge Functions → Secrets. Never put them in an Expo environment:
 
 ```text
 REVENUECAT_WEBHOOK_AUTHORIZATION=<random webhook authorization value>
 REVENUECAT_WEBHOOK_SIGNING_SECRET=<RevenueCat HMAC signing secret>
-# Leave XAI_API_KEY unset until xAI deployment is separately approved.
+# Leave all xAI values unset until final provider enablement is separately approved.
 # XAI_API_KEY=<production xAI key>
-XAI_CHAT_MODEL=grok-4.5
+# XAI_CHAT_MODEL_STANDARD=<approved routine model>
+# XAI_CHAT_MODEL_PREMIUM=<approved higher-quality model>
 GEAR_X_ALLOWED_ORIGINS=https://<production-web-origin>
 GEAR_X_TRANSCRIPTION_DAILY_LIMIT=20
 GEAR_X_INTELLIGENCE_DAILY_LIMIT=50
 GEAR_X_REQUESTS_PER_MINUTE=10
-GEAR_X_MAX_AUDIO_BYTES=10485760
-GEAR_X_MAX_AUDIO_DURATION_MS=900000
+GEAR_X_MAX_AUDIO_BYTES=41943040
+GEAR_X_MAX_AUDIO_DURATION_MS=7200000
 GEAR_X_MAX_GENERATE_BYTES=24000
 GEAR_X_PROVIDER_TIMEOUT_MS=25000
-GEAR_X_STT_MICROS_PER_HOUR=<reviewed cost estimate>
-GEAR_X_INTELLIGENCE_MICROS_PER_MILLION_RESERVED=<reviewed cost estimate>
 ```
 
 The Supabase URL, publishable key, and function URL are intentionally public routing/auth-bootstrap values. Configure the Expo production environment with:
@@ -57,7 +56,7 @@ EXPO_PUBLIC_GEAR_X_REVENUECAT_GOOGLE_KEY=<public Google SDK key>
 In Supabase Dashboard:
 
 1. Open Authentication → Sign In / Providers and enable Anonymous Sign-Ins.
-2. Keep the anonymous Auth sign-up IP rate limit at 30/hour or lower. The backend additionally enforces atomic plan capability, duration, request, token, size, rolling-rate, and global cost limits.
+2. Set anonymous Auth sign-up IP rate to 3/hour per IP or lower after legitimate install/load testing. The backend additionally enforces atomic plan capability, duration, request, separate input/output, size, rolling-rate, per-user spend, and global cost limits.
 3. Do not enable CAPTCHA until the mobile app has a challenge/token UX; enabling it now would intentionally block anonymous signup. Add that UX before increasing exposure or signup limits.
 4. Do not grant `anon` or `authenticated` direct access to backend usage, plan, subscription, billing-event, product-mapping, or cloud-control tables. Their migrations enable RLS and reserve service-role access.
 
@@ -72,7 +71,7 @@ Verify in this order:
 1. Confirm `GET /health` without a bearer token returns `401` and `UNAUTHORIZED`.
 2. Complete anonymous sign-in and confirm `POST /v1/mobile/session` returns the validated short-lived token.
 3. Confirm the authenticated health request returns `{ "status": "ok" }`.
-4. Confirm baseline users receive `ENTITLEMENT_REQUIRED` and no provider request is made.
+4. Confirm a new user resolves to `free`, with 30 monthly transcription minutes and bounded trial intelligence; attempts above each Free capability/period/spend limit must make no provider request.
 5. Apply a sandbox subscription through a verified RevenueCat webhook and confirm only its mapped capabilities appear at `GET /v1/entitlements`.
 6. Upload a short consented M4A recording and confirm a real configured-provider transcription returns the existing mobile segment shape.
 7. Run entitled agent capabilities with task-scoped context and confirm schema validation and provider-reported token completion.

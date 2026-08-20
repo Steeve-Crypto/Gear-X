@@ -24,6 +24,8 @@ Use a capability router rather than a single application-wide AI provider.
 4. **Consumer cloud:** the app talks only to a Gear X backend with a short-lived session credential. Provider secrets remain server-side. Remote audio or evidence requires persisted consent, a server-authoritative capability entitlement, remaining quota/budget, and a visible state. Processing mode cannot override entitlement.
 5. **Developer providers:** Ollama, local Whisper, self-hosted OpenAI-compatible endpoints, and future bring-your-own-provider integrations remain optional developer capabilities.
 
+Launch cloud model routing remains server configuration: extraction, ordinary summaries, question refinement, and simple transformations use the `standard` model class; complex weaving and answer synthesis may use `premium`. Plan rows map capabilities to classes, while concrete model names come only from server secrets. No model is enabled or deployed by this decision.
+
 The first production configuration is native OS transcription plus deterministic local intelligence and retrieval. It has the smallest download and memory impact. A deployed Gear X backend is an optional entitled enhancement for devices whose speech service lacks recorded-file or on-device support; absence of entitlement never disables local Gear X.
 
 ## Option evaluation
@@ -90,7 +92,7 @@ Private mode transmits nothing. Balanced and Quality disclose remote processing 
 Expo custom development/store builds, `expo-speech-recognition`, platform speech services, SQLite repositories, agent runtime, privacy settings, and an optional deployed Gear X backend.
 
 ## Open implementation decisions
-- Production Gear X backend URL, authentication/session-attestation design, xAI model selection, service budget, and retention policy.
+- Production Gear X backend URL, authentication/session-attestation design, concrete standard/premium provider models, global service budgets, and provider retention policy.
 - Whether to ship an optional whisper.cpp model pack after physical-device memory, heat, speed, size, and accuracy tests.
 - Apple Foundation Models and Gemini Nano bridges after supported-device coverage justifies their maintenance cost.
 - Compact local embedding model selection; FTS5 plus deterministic local ranking is the release baseline until semantic retrieval is benchmarked.

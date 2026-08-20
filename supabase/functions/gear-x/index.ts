@@ -23,6 +23,8 @@ const supabaseUrl = required('SUPABASE_URL');
 const supabaseAnonKey = required('SUPABASE_ANON_KEY');
 const supabaseServiceKey = required('SUPABASE_SERVICE_ROLE_KEY');
 const xaiApiKey = Deno.env.get('XAI_API_KEY') ?? '';
+const xaiStandardModel = Deno.env.get('XAI_CHAT_MODEL_STANDARD') ?? Deno.env.get('XAI_CHAT_MODEL') ?? '';
+const xaiPremiumModel = Deno.env.get('XAI_CHAT_MODEL_PREMIUM') ?? '';
 const revenueCatWebhookAuthorization = required('REVENUECAT_WEBHOOK_AUTHORIZATION');
 const revenueCatWebhookSigningSecret = required('REVENUECAT_WEBHOOK_SIGNING_SECRET');
 const admin = createClient(supabaseUrl, supabaseServiceKey, {
@@ -143,14 +145,11 @@ const handler = createGearXHandler({
     const usedPeriodDuration = rows.reduce((sum, row) => sum + Number(row.duration_ms || 0), 0);
     const usedInputTokens = rows.reduce((sum, row) => sum + Number(row.input_tokens ?? row.reserved_input_tokens ?? 0), 0);
     const usedOutputTokens = rows.reduce((sum, row) => sum + Number(row.output_tokens ?? row.reserved_output_tokens ?? 0), 0);
-    const usedCost = rows.reduce((sum, row) => sum + Number(row.actual_cost_micros ?? row.estimated_cost_micros ?? 0), 0);
     const ratios = [
       Number(plan.intelligence_monthly_input_tokens) > 0
         ? 1 - usedInputTokens / Number(plan.intelligence_monthly_input_tokens) : 0,
       Number(plan.intelligence_monthly_output_tokens) > 0
         ? 1 - usedOutputTokens / Number(plan.intelligence_monthly_output_tokens) : 0,
-      Number(plan.monthly_provider_budget_micros) > 0
-        ? 1 - usedCost / Number(plan.monthly_provider_budget_micros) : 0,
     ];
     const costTicks = Number(body.usage?.cost_in_usd_ticks);
     return {
@@ -228,14 +227,13 @@ const handler = createGearXHandler({
     if (error) throw new BackendError(ERROR_CODES.INTERNAL_ERROR, 'Billing synchronization failed.', 500);
   },
   generate: async (payload: Record<string, unknown>, signal: AbortSignal, modelClass?: string) => {
-    if (!xaiApiKey) throw new BackendError(ERROR_CODES.CLOUD_DISABLED, 'Cloud intelligence is unavailable.', 503);
+    const model = modelClass === 'premium' ? xaiPremiumModel : xaiStandardModel;
+    if (!xaiApiKey || !model) throw new BackendError(ERROR_CODES.CLOUD_DISABLED, 'Cloud intelligence is unavailable.', 503);
     const response = await providerFetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${xaiApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: modelClass === 'premium'
-          ? (Deno.env.get('XAI_CHAT_MODEL_PREMIUM') ?? Deno.env.get('XAI_CHAT_MODEL') ?? 'grok-4.5')
-          : (Deno.env.get('XAI_CHAT_MODEL') ?? 'grok-4.5'),
+        model,
         messages: [
           { role: 'system', content: payload.system },
           { role: 'user', content: payload.prompt },

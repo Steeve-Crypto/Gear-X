@@ -129,3 +129,10 @@ test('paid resets use verified billing period and free resets server-side', asyn
   assert.match(sql, /if p_pending_change then[\s\S]*pending_plan_id = p_plan_id/);
   assert.doesNotMatch(sql, /device_id|client_timestamp/);
 });
+
+test('model names remain centralized server configuration', async () => {
+  const source = await readFile('supabase/functions/gear-x/index.ts', 'utf8');
+  assert.match(source, /XAI_CHAT_MODEL_STANDARD/);
+  assert.match(source, /XAI_CHAT_MODEL_PREMIUM/);
+  assert.doesNotMatch(source, /model:\s*['"]grok-/);
+});

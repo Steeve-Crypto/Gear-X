@@ -9,12 +9,13 @@ The RevenueCat App User ID must be the authenticated Supabase user UUID returned
 ## External setup
 
 1. Create one RevenueCat project and connect its Apple App Store and Google Play apps.
-2. Create the Apple and Google subscription products after final names, billing periods, prices, tax, territories, and grace policy are approved. Do not reuse the SQL example identifiers below as marketing commitments.
-3. Import both stores' products into RevenueCat. Create one current offering and attach packages. The client paywall reads the remotely configured offering.
-4. Enable RevenueCat Customer Center if the Manage subscription action will be shipped.
-5. Add a RevenueCat webhook with URL `https://<GEAR_X_PROJECT_REF>.supabase.co/functions/v1/gear-x/v1/billing/revenuecat/webhook`, an unguessable authorization header value, and HMAC signing enabled. Subscribe to production and sandbox lifecycle events.
-6. Put that exact header value in `REVENUECAT_WEBHOOK_AUTHORIZATION` and the one-time signing secret in `REVENUECAT_WEBHOOK_SIGNING_SECRET` in Supabase Edge Function secrets. Gear X verifies the HMAC-SHA256 over the raw body, uses a constant-time comparison, and rejects signatures outside a five-minute replay window before parsing JSON.
-7. Put only the platform-specific public RevenueCat SDK keys in the EAS build environment:
+2. In App Store Connect, create one subscription group with `gearx_max_monthly` ranked above `gearx_pro_monthly`. Configure Pro at USD $9.99/month and Max at USD $19.99/month, then complete localized names, tax, territories, review information, and grace policy.
+3. In Google Play Console, create subscriptions `gearx_pro_monthly` and `gearx_max_monthly`, each with an auto-renewing monthly base plan. The backend normalizes RevenueCat's optional `:base_plan_id` suffix while retaining these approved product IDs.
+4. In RevenueCat, create entitlements `gearx_pro` and `gearx_max`; attach each platform's matching product. Create the current offering `default` with custom packages `pro_monthly` and `max_monthly`. Do not create annual packages.
+5. Enable RevenueCat Customer Center for the Manage subscription action.
+6. Add a RevenueCat webhook with URL `https://<GEAR_X_PROJECT_REF>.supabase.co/functions/v1/gear-x/v1/billing/revenuecat/webhook`, an unguessable authorization header value, and HMAC signing enabled. Subscribe to production and sandbox lifecycle events.
+7. Put that exact header value in `REVENUECAT_WEBHOOK_AUTHORIZATION` and the one-time signing secret in `REVENUECAT_WEBHOOK_SIGNING_SECRET` in Supabase Edge Function secrets. Gear X verifies the HMAC-SHA256 over the raw body, uses a constant-time comparison, and rejects signatures outside a five-minute replay window before parsing JSON.
+8. Put only the platform-specific public RevenueCat SDK keys in the EAS build environment:
 
 ```text
 EXPO_PUBLIC_GEAR_X_REVENUECAT_APPLE_KEY=appl_<public-sdk-key>
@@ -23,43 +24,25 @@ EXPO_PUBLIC_GEAR_X_REVENUECAT_GOOGLE_KEY=goog_<public-sdk-key>
 
 Never put RevenueCat secret/API keys, store credentials, service-account JSON, webhook authorization, Supabase service-role keys, or AI-provider keys in Expo variables.
 
-## Server plan configuration
+## Approved server plan configuration
 
-The migration creates only `baseline`, with no hosted-cloud access. Insert launch plans and product mappings through an audited service-role/admin migration after commercial values are approved. This deliberately incomplete example shows the fields, not a launch plan:
+Migration `20260820003000_launch_plans.sql` is the economic authority. It seeds only the approved monthly launch plans:
 
-```sql
-insert into public.gear_x_plan_definitions (
-  id, display_name, cloud_capabilities, capability_daily_limits,
-  transcription_daily_ms, transcription_monthly_ms,
-  transcription_daily_requests, intelligence_daily_requests,
-  intelligence_monthly_tokens, rate_limit_per_minute,
-  max_audio_duration_ms, max_audio_bytes, max_context_bytes, model_class
-) values (
-  '<INTERNAL_PLAN_ID>', '<CONSUMER_DISPLAY_NAME>',
-  array['cloud_transcription', 'cloud_summarization'],
-  '{"cloud_transcription": <DAILY_REQUEST_LIMIT>}'::jsonb,
-  <DAILY_DURATION_MS>, <MONTHLY_DURATION_MS>,
-  <DAILY_TRANSCRIPTION_REQUESTS>, <DAILY_INTELLIGENCE_REQUESTS>,
-  <MONTHLY_INTELLIGENCE_TOKENS>, <ROLLING_REQUESTS_PER_MINUTE>,
-  <MAX_AUDIO_DURATION_MS>, <MAX_AUDIO_BYTES>, <MAX_CONTEXT_BYTES>, 'standard'
-);
+| Plan | Customer price | Cloud transcription | Internal input/output ceiling | Internal per-user provider ceiling |
+| --- | ---: | ---: | ---: | ---: |
+| `free` | $0 | 30 minutes/server UTC month | 30,000 / 15,000 | $0.25/period |
+| `pro` | $9.99/month | 10 hours/verified billing period | 300,000 / 100,000 | $3.00/period |
+| `max` | $19.99/month | 30 hours/verified billing period | 900,000 / 300,000 | $7.00/period |
 
-insert into public.gear_x_billing_product_mappings (product_id, plan_id, store)
-values
-  ('<APPLE_PRODUCT_ID>', '<INTERNAL_PLAN_ID>', 'app_store'),
-  ('<GOOGLE_PRODUCT_ID>', '<INTERNAL_PLAN_ID>', 'play_store');
-```
+All three retain every local feature. Cloud extraction, weaving, summarization, questioning, and answer synthesis have independent daily and period request ceilings. Free is a small trial; Max intelligence capacity is exactly three times Pro. The migration maps the same approved product IDs independently by store using `(store, product_id)` and maps RevenueCat `gearx_pro`/`gearx_max` entitlements.
 
-Capabilities are independent of tiers: `cloud_transcription`, `cloud_extraction`, `cloud_weaving`, `cloud_summarization`, `cloud_questioning`, and `cloud_answer_synthesis`. Adding a product mapping does not enable cloud globally.
+Paid usage starts at verified `purchased_at_ms` and resets at the verified expiration/renewal boundary. A `PRODUCT_CHANGE` event records a pending plan only; the existing plan remains authoritative until RevenueCat sends the effective renewal or initial-purchase event. Free usage resets at a server UTC month boundary. Reinstall, device identity, or client timestamps cannot reset an allowance.
 
 ## Cost controls
 
-Provider prices are server configuration. Set conservative reservation rates in Supabase secrets:
+Provider prices are server configuration in the plan table and must be updated through an audited migration/admin change before enabling a provider. The August 2026 launch assumptions are REST speech-to-text $0.10/hour, standard text $1.25/million input and $2.50/million output, and premium text $2.00/million input and $6.00/million output. Current reference: [xAI pricing](https://docs.x.ai/developers/pricing). Reservations use the configured model class and separate input/output estimates; provider-reported actual cost replaces the estimate when available.
 
-```text
-GEAR_X_STT_MICROS_PER_HOUR=<estimated provider cost in millionths of currency per audio hour>
-GEAR_X_INTELLIGENCE_MICROS_PER_MILLION_RESERVED=<estimated cost in millionths per million reserved tokens>
-```
+At the conservative premium rate, full transcription plus full intelligence models to $0.20 Free, $2.20 Pro, and $6.60 Max, below the hard $0.25/$3/$7 per-user ceilings. Prices can change; review the assumptions and reduce allowances or update rates before provider enablement. These figures are operations data and must not appear in consumer UI.
 
 Then set non-zero reviewed budgets and explicitly enable cloud:
 
@@ -73,10 +56,12 @@ set enabled = true,
 where singleton = true;
 ```
 
-Cloud is fail-closed after migration: `enabled=false` and zero budgets. Set `enabled=false` for an immediate provider kill switch. Individual capabilities can be disabled without an app release. Per-user duration, request, token, size, capability, and rolling-rate limits remain enforced atomically even while the global switch is on.
+Cloud is fail-closed after migration: `enabled=false` and zero global budgets are the conservative development defaults. Production daily/monthly budgets are intentionally unset until reviewed. Set `enabled=false` for an immediate provider kill switch. Individual capabilities can be disabled without an app release. Per-user duration, request, separate input/output, per-capability, size, rate, billing-period, and spend limits remain atomic even while the global switch is on.
 
 ## Lifecycle verification
 
-Use both Apple sandbox and Google license testers. Verify initial purchase, renewal, cancellation with access through paid period, uncancellation, upgrade, downgrade/product change, billing retry with and without grace, expiration, refund/customer-support revocation, restore after reinstall, identity transfer, duplicate webhook, and older webhook. Confirm `/v1/entitlements` changes only after the authenticated webhook is accepted, and confirm every revoked/expired capability is rejected before any provider call.
+Use both Apple sandbox and Google license testers. Verify initial purchase, renewal, cancellation with access through paid period, uncancellation, immediate Pro→Max upgrade, deferred Max→Pro downgrade, billing retry with and without grace, expiration, refund/customer-support revocation, restore after reinstall, identity transfer, duplicate webhook, and older webhook. Confirm a downgrade remains pending until its effective renewal, `/v1/entitlements` changes only after an authenticated signed webhook, and revoked/expired capabilities are rejected before provider access.
+
+Free cloud is bounded by the persisted authenticated user, conservative anonymous-signup IP throttling, per-capability/rate/period limits, per-user $0.25 ceiling, and global budgets. Set the production anonymous sign-up limit to 3/hour per IP or lower after load testing. This does not claim device identity is tamper-proof; require App Attest/Play Integrity in a later release if observed abuse justifies it. Paid restore remains store-verified and is not blocked by Free anti-abuse policy.
 
 Billing records contain only user/product/event identifiers and lifecycle metadata. Cloud usage records contain counts, duration, tokens, estimated cost, provider/capability, timestamps, and status—never receipt bodies, audio, transcripts, prompts, responses, or raw provider errors.

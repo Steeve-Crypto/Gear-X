@@ -17,6 +17,6 @@ The production backend is implemented locally with Supabase anonymous Auth, Expo
 
 ## Exact next step
 
-Supabase CLI authentication is available, but no dedicated GearX project exists. Create that project in the current Supabase organization, retain its database password, enable anonymous Auth and CAPTCHA, and supply an xAI production key through Supabase Edge Function Secrets. Then follow `docs/BACKEND_DEPLOYMENT.md` to link, migrate, deploy, configure the three public Expo variables, and run live verification.
+Supabase CLI authentication is available, but no dedicated GearX project exists. Create that project in the current Supabase organization, retain its database password, enable anonymous Auth without raising its IP rate limit, and supply an xAI production key through Supabase Edge Function Secrets. Then follow `docs/BACKEND_DEPLOYMENT.md` to link, migrate, deploy, configure the three public Expo variables, and run live verification.
 
 Do not reuse the unrelated Supabase projects currently visible to the account. Do not mark backend deployment, live transcription/intelligence, physical-device behavior, signed builds, store review, SQLite encryption, or remaining advisory remediation complete without direct evidence.

@@ -25,7 +25,7 @@ Cloud vault storage, uploading a complete vault, paid subscription logic, Ollama
 - Errors use stable codes: `UNAUTHORIZED`, `CONSENT_REQUIRED`, `QUOTA_EXCEEDED`, `INVALID_REQUEST`, `PAYLOAD_TOO_LARGE`, `PROVIDER_UNAVAILABLE`, `PROVIDER_TIMEOUT`, `MALFORMED_PROVIDER_OUTPUT`, and `INTERNAL_ERROR`.
 
 ## Technical requirements
-- Supabase Auth supplies short-lived access tokens and refresh tokens; anonymous sign-ins must be enabled with CAPTCHA/abuse controls configured before production exposure.
+- Supabase Auth supplies short-lived access tokens and refresh tokens; anonymous sign-ins retain the platform IP-based creation limit (30/hour at implementation time), while backend calls have stricter per-user rate and daily limits. CAPTCHA must not be enabled until a mobile challenge/token UX is implemented.
 - The Edge Function performs explicit JWT verification with Supabase Auth before handling every route, including health, so authentication failures retain the stable Gear X error shape.
 - Server secrets contain `XAI_API_KEY`; the Expo public configuration contains only the function URL, Supabase URL, and Supabase publishable key.
 - `XAI_CHAT_MODEL`, request limits, timeouts, and maximum payload sizes are server configuration, not product pricing logic.
@@ -37,7 +37,7 @@ Cloud vault storage, uploading a complete vault, paid subscription logic, Ollama
 Missing/expired/invalid authentication, anonymous sign-up disabled, missing consent, malformed JSON or multipart data, unsupported MIME, oversized audio or context, quota or rate exhaustion, provider timeout, provider rejection, malformed provider output, database accounting failure, and network loss.
 
 ## Privacy implications
-Private mode makes no backend call. Balanced and Quality calls transmit only the selected audio or task-scoped context after consent. Supabase retains authentication records until the user is deleted; a Postgres cron job deletes metadata-only usage rows after 35 days. xAI processes request content transiently according to the production xAI account settings; Gear X does not store provider content.
+Private mode makes no backend call. Balanced and Quality calls transmit only the selected audio or task-scoped context after consent. A Postgres cron job deletes 35-day-old metadata and inactive anonymous users with no usage during that window. Active authentication records remain until the user is deleted. xAI processes request content transiently according to the production xAI account settings; Gear X does not store provider content.
 
 ## Acceptance criteria
 - Unauthenticated protected requests return structured `UNAUTHORIZED` errors.
@@ -52,7 +52,7 @@ Private mode makes no backend call. Balanced and Quality calls transmit only the
 Supabase Auth, Postgres, Edge Functions, platform secure storage, xAI APIs, existing transcription/inference adapters, provider routing, privacy settings, and release configuration.
 
 ## Open implementation decisions
-Production Supabase project/region, CAPTCHA provider and thresholds, permanent account-linking UX, paid entitlement source, operational alerting destination, provider data-processing settings, and whether future attestation is required beyond authenticated anonymous users and rate limits.
+Production Supabase project/region, mobile CAPTCHA challenge/token UX, permanent account-linking UX, paid entitlement source, operational alerting destination, provider data-processing settings, and whether future attestation is required beyond authenticated anonymous users and rate limits.
 
 ## Verification
 Run `npm run test:backend`, mobile provider tests, secret/config scans, `npm run validate`, and Expo Doctor. After project credentials exist, apply migrations, set function secrets, deploy with JWT verification, enable protected anonymous sign-in, and exercise authenticated session, transcription, intelligence, malformed input, quota, timeout/failure, and bundle-secret checks against the real URL. Never mark deployment or live provider verification complete from local mocks.

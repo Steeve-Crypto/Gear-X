@@ -16,7 +16,7 @@ Gear X is not yet cleared for App Store or Google Play submission.
 
 ## Current release blockers
 
-- The backend is not deployed. Supabase CLI authentication is available, but the account has no dedicated GearX project; the unrelated existing projects were not reused. A project, anonymous Auth plus CAPTCHA, xAI secret, migration deployment, function deployment, and live endpoint verification remain required.
+- The backend is not deployed. Supabase CLI authentication is available, but the account has no dedicated GearX project; the unrelated existing projects were not reused. A project, rate-limited anonymous Auth, xAI secret, migration deployment, function deployment, and live endpoint verification remain required.
 - No real `EXPO_PUBLIC_GEAR_X_BACKEND_URL`, Supabase URL, or publishable key is configured in a production build. No live xAI transcription/intelligence call is claimed.
 - EAS is not authenticated or linked to a project on this machine, so Android or iOS builds cannot yet be submitted to Expo's build service. Physical iOS builds also require Apple Developer credentials and a registered device.
 - Native recorded-file transcription and 3D GPU/capture behavior have not been exercised on physical iOS and Android devices. The native bridge requires a development/store build and does not run in Expo Go.

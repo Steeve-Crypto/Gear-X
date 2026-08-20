@@ -22,7 +22,7 @@ The review server runs at `http://127.0.0.1:8088/orbit`. Runtime logs live under
 
 1. Sign in to Expo/EAS and link the project, then run the existing Android, iOS device, and iOS Simulator build profiles.
 2. Supply Apple Developer credentials and register a physical iOS device; use macOS/Xcode for simulator/device installation.
-3. Create a dedicated GearX Supabase project, enable anonymous Auth plus CAPTCHA, set the xAI/config secrets, and follow `docs/BACKEND_DEPLOYMENT.md`. Then set the three public Expo routing/auth-bootstrap values and perform real authenticated transcription/intelligence/quota tests.
+3. Create a dedicated GearX Supabase project, enable anonymous Auth without raising its IP rate limit, set the xAI/config secrets, and follow `docs/BACKEND_DEPLOYMENT.md`. Then set the three public Expo routing/auth-bootstrap values and perform real authenticated transcription/intelligence/quota tests.
 4. Exercise recording, recorded-file speech recognition, interruption/recovery, retention cleanup, and the 3D GPU path on representative physical Android and iOS devices.
 5. Prepare store metadata, privacy disclosures, screenshots, signing credentials, and submission records.
 6. Monitor upstream Expo/React Native/Metro advisory fixes and upgrade only to an Expo-compatible set that passes Doctor and validation.

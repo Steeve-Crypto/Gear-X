@@ -4,7 +4,7 @@
 
 - A dedicated Supabase project named GearX. Do not reuse another product's database.
 - Anonymous sign-ins enabled in Supabase Auth.
-- CAPTCHA enabled for anonymous sign-up to limit account-creation abuse.
+- Supabase's anonymous-signup IP rate limit retained at 30/hour or lower. Do not raise it for launch.
 - An xAI production API key with access to chat completions and batch speech-to-text.
 - The production web origin, if web access is enabled. Native apps do not require an origin allow-list entry.
 
@@ -49,8 +49,8 @@ EXPO_PUBLIC_GEAR_X_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
 In Supabase Dashboard:
 
 1. Open Authentication → Sign In / Providers and enable Anonymous Sign-Ins.
-2. Open Authentication → Bot and Abuse Protection, configure hCaptcha or Cloudflare Turnstile, and require it for anonymous sign-up.
-3. Keep the Auth sign-up rate limit enabled. The backend additionally enforces an atomic per-user rolling-minute limit and separate daily operation quotas.
+2. Keep the anonymous Auth sign-up IP rate limit at 30/hour or lower. The backend additionally enforces an atomic per-user rolling-minute limit and separate daily operation quotas.
+3. Do not enable CAPTCHA until the mobile app has a challenge/token UX; enabling it now would intentionally block anonymous signup. Add that UX before increasing exposure or signup limits.
 4. Do not grant `anon` or `authenticated` access to `gear_x_backend_usage`. The migration enables RLS and grants the reservation function only to `service_role`.
 
 Anonymous users receive the `authenticated` role and can later be linked to a permanent account. Their refresh token is stored with Expo SecureStore. Backend identity always comes from the verified JWT, never a submitted user ID.
@@ -74,7 +74,6 @@ Verify in this order:
 
 ## Retention and rollback
 
-The backend never stores request content. Metadata-only usage rows are deleted after 35 days by the `gear-x-usage-retention` Postgres cron job. Supabase Auth retains the anonymous user until that account is deleted. xAI audio/content retention follows the production provider-account settings; confirm those settings before launch.
+The backend never stores request content. The `gear-x-usage-retention` Postgres cron job deletes metadata-only usage rows after 35 days and deletes inactive anonymous identities older than 35 days when they have no usage in that window. Active Auth users remain until account deletion. xAI audio/content retention follows the production provider-account settings; confirm those settings before launch.
 
 To disable cloud processing without changing local behavior, remove the three `EXPO_PUBLIC_GEAR_X_*` values from the production build environment. Roll back the Edge Function before dropping database functions/tables. Do not delete the Supabase project until Auth-user and usage-metadata deletion obligations are satisfied.
-

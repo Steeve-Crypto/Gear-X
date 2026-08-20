@@ -14,6 +14,7 @@ import { TranscriptionRouter } from '../infrastructure/transcription/router';
 import Constants from 'expo-constants';
 import { usageRepository } from '../repositories/usageRepository';
 import { BackendSessionManager } from '../infrastructure/auth/backendSession';
+import { useEntitlementStore } from '../state/entitlementStore';
 
 export function configuredBackendUrl(): string {
   const value = Constants.expoConfig?.extra?.gearXBackendUrl;
@@ -47,6 +48,24 @@ function getBackendSessionToken(baseUrl: string): Promise<string> {
   return sessionManager.getAccessToken();
 }
 
+export async function getConfiguredBackendIdentity(): Promise<{ accessToken: string; userId: string }> {
+  const baseUrl = configuredBackendUrl();
+  if (!baseUrl) throw new GearXError('UNAUTHORIZED', 'Backend authentication is not configured.');
+  await getBackendSessionToken(baseUrl);
+  if (!sessionManager) throw new GearXError('UNAUTHORIZED', 'Backend authentication is unavailable.');
+  return sessionManager.getIdentity();
+}
+
+const markCloudFallback = (code: string) => {
+  if (code === 'ENTITLEMENT_REQUIRED') {
+    useEntitlementStore.getState().markFallback('Cloud enhancement is not included. Gear X continued locally.');
+  } else if (code === 'QUOTA_EXCEEDED') {
+    useEntitlementStore.getState().markFallback('Cloud allowance is exhausted. Gear X continued locally.');
+  } else if (code === 'CLOUD_DISABLED') {
+    useEntitlementStore.getState().markFallback('Cloud enhancements are unavailable. Local Gear X remains active.');
+  }
+};
+
 export function createTranscriptionProvider(
   settings: AppSettings,
 ): TranscriptionProvider {
@@ -57,6 +76,7 @@ export function createTranscriptionProvider(
       baseUrl: endpoint,
       getAccessToken: () => getBackendSessionToken(endpoint),
       hasRemoteConsent: () => settings.remoteProcessingConsent,
+      onCloudUnavailable: markCloudFallback,
     })
     : null;
   const localWhisper = settings.transcriptionProvider === 'local-whisper-server'
@@ -95,6 +115,7 @@ export function createInferenceProvider(settings: AppSettings): InferenceProvide
       baseUrl: endpoint,
       getAccessToken: () => getBackendSessionToken(endpoint),
       hasRemoteConsent: () => settings.remoteProcessingConsent,
+      onCloudUnavailable: markCloudFallback,
     }));
   }
   if (settings.processingMode === 'developer') {

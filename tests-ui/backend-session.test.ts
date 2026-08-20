@@ -26,7 +26,7 @@ describe('backend mobile authentication', () => {
     const saved = storage();
     const request = jest.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => authPayload() } as Response)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'access-token' }) } as Response);
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'access-token', userId: 'user-1' }) } as Response);
     const manager = new BackendSessionManager(config, saved, request);
 
     await expect(manager.getAccessToken()).resolves.toBe('access-token');
@@ -39,6 +39,7 @@ describe('backend mobile authentication', () => {
       headers: { Authorization: 'Bearer access-token', apikey: 'sb_publishable_test' },
     });
     expect(saved.value).toContain('refresh-token');
+    await expect(manager.getIdentity()).resolves.toEqual({ accessToken: 'access-token', userId: 'user-1' });
   });
 
   test('refreshes an expired session and validates the replacement', async () => {
@@ -47,7 +48,7 @@ describe('backend mobile authentication', () => {
     }));
     const request = jest.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => authPayload('fresh') } as Response)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'fresh' }) } as Response);
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'fresh', userId: 'user-1' }) } as Response);
     const manager = new BackendSessionManager(config, saved, request);
 
     await expect(manager.getAccessToken()).resolves.toBe('fresh');
@@ -66,11 +67,10 @@ describe('backend mobile authentication', () => {
   test('coalesces concurrent authentication attempts', async () => {
     const request = jest.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => authPayload() } as Response)
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'access-token' }) } as Response);
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ token: 'access-token', userId: 'user-1' }) } as Response);
     const manager = new BackendSessionManager(config, storage(), request);
     await expect(Promise.all([manager.getAccessToken(), manager.getAccessToken()]))
       .resolves.toEqual(['access-token', 'access-token']);
     expect(request).toHaveBeenCalledTimes(2);
   });
 });
-

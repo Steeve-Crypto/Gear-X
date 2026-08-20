@@ -30,6 +30,7 @@ export interface BackendInferenceConfig {
   baseUrl: string;
   getAccessToken: () => Promise<string>;
   hasRemoteConsent: () => boolean;
+  onCloudUnavailable?: (code: string) => void;
 }
 
 export class BackendInferenceProvider implements InferenceProvider {
@@ -75,7 +76,11 @@ export class BackendInferenceProvider implements InferenceProvider {
         capability: request.capability,
       }),
     });
-    if (!response.ok) throw await backendFailure(response);
+    if (!response.ok) {
+      const error = await backendFailure(response);
+      this.config.onCloudUnavailable?.(error.code);
+      throw error;
+    }
     const payload = (await response.json()) as { text?: string };
     if (!payload.text?.trim()) throw new GearXError('INVALID_MODEL_OUTPUT', 'Backend returned no text.');
     return payload.text.trim();

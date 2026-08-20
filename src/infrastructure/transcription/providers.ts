@@ -226,6 +226,7 @@ export interface BackendTranscriptionConfig {
   baseUrl: string;
   getAccessToken: () => Promise<string>;
   hasRemoteConsent: () => boolean;
+  onCloudUnavailable?: (code: string) => void;
 }
 
 export class BackendTranscriptionProvider implements TranscriptionProvider {
@@ -271,7 +272,9 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
       signal: input.signal,
     });
     if (!response.ok) {
-      throw await backendFailure(response);
+      const error = await backendFailure(response);
+      this.config.onCloudUnavailable?.(error.code);
+      throw error;
     }
     const result = (await response.json()) as Partial<TranscriptionResult>;
     if (typeof result.text !== 'string' || !Array.isArray(result.segments)) {

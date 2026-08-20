@@ -8,6 +8,7 @@ interface AuthSession {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  userId?: string;
 }
 
 interface SupabaseAuthPayload {
@@ -15,6 +16,7 @@ interface SupabaseAuthPayload {
   refresh_token?: string;
   expires_at?: number;
   expires_in?: number;
+  user?: { id?: string };
 }
 
 export interface BackendAuthConfig {
@@ -55,6 +57,7 @@ function parseSession(payload: SupabaseAuthPayload): AuthSession {
     accessToken: payload.access_token,
     refreshToken: payload.refresh_token,
     expiresAt: payload.expires_at ?? Math.floor(Date.now() / 1000) + (payload.expires_in ?? 300),
+    userId: payload.user?.id,
   };
 }
 
@@ -78,6 +81,15 @@ export class BackendSessionManager {
   async clear(): Promise<void> {
     this.session = null;
     await this.storage.remove();
+  }
+
+  async getIdentity(): Promise<{ accessToken: string; userId: string }> {
+    const accessToken = await this.getAccessToken();
+    if (this.session?.userId) return { accessToken, userId: this.session.userId };
+    const validated = await this.validate(accessToken);
+    this.session = { ...(this.session as AuthSession), userId: validated.userId };
+    await this.storage.set(JSON.stringify(this.session));
+    return { accessToken, userId: validated.userId };
   }
 
   private async resolveAccessToken(): Promise<string> {
@@ -121,19 +133,25 @@ export class BackendSessionManager {
     return parseSession(await response.json() as SupabaseAuthPayload);
   }
 
-  private async saveAndValidate(session: AuthSession): Promise<string> {
+  private async validate(accessToken: string): Promise<{ userId: string }> {
     const response = await this.request(`${this.config.backendUrl}/v1/mobile/session`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${session.accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         apikey: this.config.supabasePublishableKey,
       },
     });
     if (!response.ok) throw new GearXError('UNAUTHORIZED', 'Backend rejected the authenticated session.');
-    const result = await response.json() as { token?: string };
-    if (result.token !== session.accessToken) {
+    const result = await response.json() as { token?: string; userId?: string };
+    if (result.token !== accessToken || !result.userId) {
       throw new GearXError('UNAUTHORIZED', 'Backend returned an invalid session.');
     }
+    return { userId: result.userId };
+  }
+
+  private async saveAndValidate(session: AuthSession): Promise<string> {
+    const validated = await this.validate(session.accessToken);
+    session.userId = validated.userId;
     this.session = session;
     await this.storage.set(JSON.stringify(session));
     return session.accessToken;
@@ -151,4 +169,3 @@ export class BackendSessionManager {
     return this.saveAndValidate(session);
   }
 }
-

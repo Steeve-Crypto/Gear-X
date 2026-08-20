@@ -87,6 +87,17 @@ describe('transcription provider boundaries', () => {
     await expect(router.transcribe({ sessionId: 's', audioUri: 'file://a' })).resolves.toEqual(fixture);
   });
 
+  test('quality transcription cannot bypass entitlement denial', async () => {
+    const cloud = {
+      id: 'cloud', name: 'cloud', remote: true,
+      isAvailable: async () => true,
+      transcribe: jest.fn(async () => { throw new (await import('../src/domain/errors')).GearXError('ENTITLEMENT_REQUIRED', 'not included'); }),
+    };
+    const router = new TranscriptionRouter([cloud, new MockTranscriptionProvider(fixture)]);
+    await expect(router.transcribe({ sessionId: 's', audioUri: 'file://a' })).resolves.toEqual(fixture);
+    expect(cloud.transcribe).toHaveBeenCalledTimes(1);
+  });
+
   test('mock provider honors cancellation', async () => {
     const controller = new AbortController();
     controller.abort();
@@ -213,6 +224,21 @@ describe('inference provider selection', () => {
     });
     await expect(router.generate({ system: 's', prompt: 'p' })).resolves.toBe('local answer');
     expect(remote.generate).not.toHaveBeenCalled();
+  });
+
+  test('cloud entitlement failure preserves local intelligence', async () => {
+    const remote: InferenceProvider = {
+      id: 'remote', name: 'remote', remote: true,
+      isAvailable: async () => true,
+      generate: jest.fn(async () => { throw new (await import('../src/domain/errors')).GearXError('ENTITLEMENT_REQUIRED', 'not included'); }),
+    };
+    const local: InferenceProvider = {
+      id: 'local', name: 'local', remote: false,
+      isAvailable: async () => true,
+      generate: jest.fn(async () => 'local answer'),
+    };
+    const router = new CapabilityInferenceRouter([remote, local]);
+    await expect(router.generate({ system: 's', prompt: 'p' })).resolves.toBe('local answer');
   });
 
   test('migrates legacy modes to safe named modes', () => {

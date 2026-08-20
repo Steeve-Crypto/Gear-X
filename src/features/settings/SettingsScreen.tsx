@@ -24,6 +24,7 @@ export default function SettingsScreen() {
         <SettingSwitch label="Automatic questions" value={settings.autoQuestion}
           onChange={(value) => change({ autoQuestion: value })} />
       </Panel>
+      <SettingsLink href="/settings/subscription" title="Plan & cloud access" body="Subscription status, cloud allowances, restore, and billing management" />
       <SettingsLink href="/settings/inference" title="AI & transcription" body="Privacy mode, device speech, cloud fallback, and developer providers" />
       <SettingsLink href="/settings/privacy" title="Privacy & data" body="Consent, retention, export, and deletion" />
       <SettingsLink href="/settings/diagnostics" title="Diagnostics" body="Database health, counts, providers, and recent errors" />
@@ -39,7 +40,7 @@ function SettingSwitch({ label, value, onChange }: { label: string; value: boole
   </View>;
 }
 
-function SettingsLink({ href, title, body }: { href: '/settings/inference' | '/settings/privacy' | '/settings/diagnostics'; title: string; body: string }) {
+function SettingsLink({ href, title, body }: { href: '/settings/inference' | '/settings/privacy' | '/settings/diagnostics' | '/settings/subscription'; title: string; body: string }) {
   return <Link href={href} asChild><Pressable accessibilityRole="link"><Panel>
     <Text style={commonStyles.label}>{title}</Text>
     <Text style={commonStyles.body}>{body}</Text>

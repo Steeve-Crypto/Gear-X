@@ -25,6 +25,9 @@ export type GearXErrorCode =
   | 'PROVIDER_TIMEOUT'
   | 'MALFORMED_PROVIDER_OUTPUT'
   | 'INTERNAL_ERROR'
+  | 'ENTITLEMENT_REQUIRED'
+  | 'CLOUD_DISABLED'
+  | 'BILLING_UNAVAILABLE'
   | 'SHARE_UNAVAILABLE';
 
 export class GearXError extends Error {
@@ -67,6 +70,9 @@ export const userErrorMessage = (error: unknown): string => {
     PROVIDER_TIMEOUT: 'The cloud provider took too long and was cancelled.',
     MALFORMED_PROVIDER_OUTPUT: 'The cloud provider returned an invalid response.',
     INTERNAL_ERROR: 'The secure cloud service could not complete the request.',
+    ENTITLEMENT_REQUIRED: 'This cloud enhancement is not included. Local Gear X remains available.',
+    CLOUD_DISABLED: 'Cloud enhancements are temporarily unavailable. Local Gear X remains available.',
+    BILLING_UNAVAILABLE: 'Subscription services are unavailable. Your local data and tools are unchanged.',
     SHARE_UNAVAILABLE: 'Sharing is unavailable on this device. The export was not sent.',
   };
   return messages[error.code];

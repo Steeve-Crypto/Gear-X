@@ -21,6 +21,7 @@ export default function RootLayout() {
         <Stack.Screen name="settings/privacy" options={{ title: 'Privacy & Data' }} />
         <Stack.Screen name="settings/inference" options={{ title: 'Inference' }} />
         <Stack.Screen name="settings/diagnostics" options={{ title: 'Diagnostics' }} />
+        <Stack.Screen name="settings/subscription" options={{ title: 'Plan & Cloud Access' }} />
         <Stack.Screen name="session/index" options={{ title: 'Sessions' }} />
         <Stack.Screen name="summaries/index" options={{ title: 'Summaries' }} />
       </Stack>

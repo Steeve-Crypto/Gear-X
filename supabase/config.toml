@@ -1,0 +1,7 @@
+project_id = "gear-x"
+
+[functions.gear-x]
+# Authentication is verified inside the function so every failure uses the
+# stable Gear X error contract instead of a gateway-specific response.
+verify_jwt = false
+

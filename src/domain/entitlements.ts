@@ -1,3 +1,5 @@
+import { GearXPlanId } from './plans';
+
 export type CloudCapability =
   | 'cloud_transcription'
   | 'cloud_extraction'
@@ -43,4 +45,3 @@ export const baselineEntitlement: EntitlementSnapshot = {
 export function hasCloudCapability(snapshot: EntitlementSnapshot, capability: CloudCapability): boolean {
   return snapshot.capabilities.includes(capability);
 }
-import { GearXPlanId } from './plans';

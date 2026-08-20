@@ -49,7 +49,15 @@ export default function SubscriptionScreen() {
     }
   }, [setLoading, setMessage, setSnapshot]);
 
-  useEffect(() => { void run('refresh'); }, [run]);
+  useEffect(() => {
+    let active = true;
+    void billingService.fetchEntitlement().then((next) => {
+      if (active) setSnapshot(next, 'Cloud access refreshed.');
+    }).catch((error) => {
+      if (active) setMessage(userErrorMessage(error));
+    });
+    return () => { active = false; };
+  }, [setMessage, setSnapshot]);
 
   const definition = publicPlan(snapshot.planId);
   const resetLabel = snapshot.resetsAt

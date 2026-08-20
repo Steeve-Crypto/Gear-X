@@ -26,7 +26,7 @@ Cloud vault storage, uploading a complete vault, paid subscription logic, Ollama
 
 ## Technical requirements
 - Supabase Auth supplies short-lived access tokens and refresh tokens; anonymous sign-ins must be enabled with CAPTCHA/abuse controls configured before production exposure.
-- The Edge Function runs with JWT verification and also resolves the authenticated user before handling protected routes.
+- The Edge Function performs explicit JWT verification with Supabase Auth before handling every route, including health, so authentication failures retain the stable Gear X error shape.
 - Server secrets contain `XAI_API_KEY`; the Expo public configuration contains only the function URL, Supabase URL, and Supabase publishable key.
 - `XAI_CHAT_MODEL`, request limits, timeouts, and maximum payload sizes are server configuration, not product pricing logic.
 - Usage rows contain user ID, operation, capability, byte count, status, and timestamps only. They never contain audio, transcript, prompts, responses, tokens, or provider errors.

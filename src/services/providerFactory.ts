@@ -13,18 +13,38 @@ import { TranscriptionProvider } from '../infrastructure/transcription/types';
 import { TranscriptionRouter } from '../infrastructure/transcription/router';
 import Constants from 'expo-constants';
 import { usageRepository } from '../repositories/usageRepository';
+import { BackendSessionManager } from '../infrastructure/auth/backendSession';
 
 export function configuredBackendUrl(): string {
   const value = Constants.expoConfig?.extra?.gearXBackendUrl;
   return typeof value === 'string' ? value.replace(/\/$/, '') : '';
 }
 
-async function getBackendSessionToken(baseUrl: string): Promise<string> {
-  const response = await fetch(`${baseUrl}/v1/mobile/session`, { method: 'POST' });
-  if (!response.ok) throw new GearXError('PROVIDER_UNAVAILABLE', 'Backend session is unavailable.');
-  const payload = (await response.json()) as { token?: string };
-  if (!payload.token) throw new GearXError('PROVIDER_UNAVAILABLE', 'Backend returned no session token.');
-  return payload.token;
+function configuredSupabaseUrl(): string {
+  const value = Constants.expoConfig?.extra?.gearXSupabaseUrl;
+  return typeof value === 'string' ? value.replace(/\/$/, '') : '';
+}
+
+function configuredSupabasePublishableKey(): string {
+  const value = Constants.expoConfig?.extra?.gearXSupabasePublishableKey;
+  return typeof value === 'string' ? value : '';
+}
+
+let sessionManager: BackendSessionManager | null = null;
+let sessionConfigKey = '';
+
+function getBackendSessionToken(baseUrl: string): Promise<string> {
+  const supabaseUrl = configuredSupabaseUrl();
+  const supabasePublishableKey = configuredSupabasePublishableKey();
+  if (!supabaseUrl || !supabasePublishableKey) {
+    throw new GearXError('UNAUTHORIZED', 'Backend authentication is not configured.');
+  }
+  const key = `${baseUrl}|${supabaseUrl}|${supabasePublishableKey}`;
+  if (!sessionManager || sessionConfigKey !== key) {
+    sessionManager = new BackendSessionManager({ backendUrl: baseUrl, supabaseUrl, supabasePublishableKey });
+    sessionConfigKey = key;
+  }
+  return sessionManager.getAccessToken();
 }
 
 export function createTranscriptionProvider(

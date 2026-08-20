@@ -6,6 +6,21 @@ import type {
   ExpoSpeechRecognitionResultEvent,
 } from 'expo-speech-recognition';
 
+type BackendErrorCode =
+  | 'UNAUTHORIZED' | 'CONSENT_REQUIRED' | 'QUOTA_EXCEEDED' | 'INVALID_REQUEST'
+  | 'PAYLOAD_TOO_LARGE' | 'PROVIDER_UNAVAILABLE' | 'PROVIDER_TIMEOUT'
+  | 'MALFORMED_PROVIDER_OUTPUT' | 'INTERNAL_ERROR';
+
+async function backendFailure(response: Response): Promise<GearXError> {
+  try {
+    const payload = await response.json() as { error?: { code?: BackendErrorCode; message?: string } };
+    if (payload.error?.code) {
+      return new GearXError(payload.error.code, payload.error.message || 'Cloud transcription failed.');
+    }
+  } catch { /* Return a redacted fallback below. */ }
+  return new GearXError('TRANSCRIPTION_FAILED', `Transcription failed (${response.status}).`);
+}
+
 export interface SpeechModule {
   abort(): void;
   addListener(
@@ -223,7 +238,10 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
   async isAvailable(): Promise<boolean> {
     if (!canUseProvider(this.remote, this.config.hasRemoteConsent())) return false;
     try {
-      const response = await fetch(`${this.config.baseUrl}/health`, { method: 'GET' });
+      const token = await this.config.getAccessToken();
+      const response = await fetch(`${this.config.baseUrl}/health`, {
+        method: 'GET', headers: { Authorization: `Bearer ${token}` },
+      });
       return response.ok;
     } catch {
       return false;
@@ -237,6 +255,7 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
     const token = await this.config.getAccessToken();
     const body = new FormData();
     body.append('session_id', input.sessionId);
+    body.append('duration_ms', String(input.durationMs ?? 1));
     body.append('file', {
       uri: input.audioUri,
       name: `${input.sessionId}.m4a`,
@@ -246,12 +265,13 @@ export class BackendTranscriptionProvider implements TranscriptionProvider {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
+        'X-Gear-X-Remote-Consent': 'granted',
       },
       body,
       signal: input.signal,
     });
     if (!response.ok) {
-      throw new GearXError('TRANSCRIPTION_FAILED', `Transcription failed (${response.status}).`);
+      throw await backendFailure(response);
     }
     const result = (await response.json()) as Partial<TranscriptionResult>;
     if (typeof result.text !== 'string' || !Array.isArray(result.segments)) {

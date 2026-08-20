@@ -1,6 +1,7 @@
 export interface TranscriptionInput {
   sessionId: string;
   audioUri: string;
+  durationMs?: number;
   locale?: string;
   signal?: AbortSignal;
 }

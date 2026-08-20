@@ -135,6 +135,7 @@ async function processCapturedSession(input: {
       transcription = await input.provider.transcribe({
         sessionId: session.id,
         audioUri: input.audioUri,
+        durationMs: session.durationMs,
         signal: input.signal,
       });
       await runRepository.finishProvider(providerRunId, providerStartedAt);

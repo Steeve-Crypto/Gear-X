@@ -130,9 +130,11 @@ describe('transcription provider boundaries', () => {
       getAccessToken: async () => 'short-lived',
       hasRemoteConsent: () => true,
     });
-    await provider.transcribe({ sessionId: 's', audioUri: 'file://recording.m4a' });
+    await provider.transcribe({ sessionId: 's', audioUri: 'file://recording.m4a', durationMs: 2_500 });
     const request = fetchSpy.mock.calls[0][1] as RequestInit;
     expect(request.body).toBeInstanceOf(FormData);
+    expect((request.body as FormData).get('duration_ms')).toBe('2500');
+    expect(request.headers).toMatchObject({ 'X-Gear-X-Remote-Consent': 'granted' });
     expect(request.headers).not.toMatchObject({ 'Content-Type': 'application/json' });
   });
 });

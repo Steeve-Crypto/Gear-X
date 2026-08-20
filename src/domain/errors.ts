@@ -17,6 +17,14 @@ export type GearXErrorCode =
   | 'MISSING_AUDIO_FILE'
   | 'NETWORK_UNAVAILABLE'
   | 'REMOTE_CONSENT_MISSING'
+  | 'UNAUTHORIZED'
+  | 'CONSENT_REQUIRED'
+  | 'QUOTA_EXCEEDED'
+  | 'INVALID_REQUEST'
+  | 'PAYLOAD_TOO_LARGE'
+  | 'PROVIDER_TIMEOUT'
+  | 'MALFORMED_PROVIDER_OUTPUT'
+  | 'INTERNAL_ERROR'
   | 'SHARE_UNAVAILABLE';
 
 export class GearXError extends Error {
@@ -51,6 +59,14 @@ export const userErrorMessage = (error: unknown): string => {
     MISSING_AUDIO_FILE: 'The recording file is no longer available.',
     NETWORK_UNAVAILABLE: 'A configured network provider cannot be reached.',
     REMOTE_CONSENT_MISSING: 'Enable remote-processing consent before using this provider.',
+    UNAUTHORIZED: 'The secure cloud session expired. Reconnect and try again.',
+    CONSENT_REQUIRED: 'Enable remote-processing consent before using cloud processing.',
+    QUOTA_EXCEEDED: 'The cloud request limit has been reached. Local processing remains available.',
+    INVALID_REQUEST: 'The cloud request could not be processed safely.',
+    PAYLOAD_TOO_LARGE: 'The selected recording or context is too large for cloud processing.',
+    PROVIDER_TIMEOUT: 'The cloud provider took too long and was cancelled.',
+    MALFORMED_PROVIDER_OUTPUT: 'The cloud provider returned an invalid response.',
+    INTERNAL_ERROR: 'The secure cloud service could not complete the request.',
     SHARE_UNAVAILABLE: 'Sharing is unavailable on this device. The export was not sent.',
   };
   return messages[error.code];

@@ -11,6 +11,21 @@ const capabilities: AICapability[] = [
   'answer-synthesis',
 ];
 
+type BackendErrorCode =
+  | 'UNAUTHORIZED' | 'CONSENT_REQUIRED' | 'QUOTA_EXCEEDED' | 'INVALID_REQUEST'
+  | 'PAYLOAD_TOO_LARGE' | 'PROVIDER_UNAVAILABLE' | 'PROVIDER_TIMEOUT'
+  | 'MALFORMED_PROVIDER_OUTPUT' | 'INTERNAL_ERROR';
+
+async function backendFailure(response: Response): Promise<GearXError> {
+  try {
+    const payload = await response.json() as { error?: { code?: BackendErrorCode; message?: string } };
+    if (payload.error?.code) {
+      return new GearXError(payload.error.code, payload.error.message || 'Cloud processing failed.');
+    }
+  } catch { /* Return a redacted fallback below. */ }
+  return new GearXError('PROVIDER_UNAVAILABLE', `Backend request failed (${response.status}).`);
+}
+
 export interface BackendInferenceConfig {
   baseUrl: string;
   getAccessToken: () => Promise<string>;
@@ -28,7 +43,11 @@ export class BackendInferenceProvider implements InferenceProvider {
   async isAvailable(signal?: AbortSignal): Promise<boolean> {
     if (!canUseProvider(this.remote, this.config.hasRemoteConsent())) return false;
     try {
-      const response = await fetch(`${this.config.baseUrl}/health`, { signal });
+      const token = await this.config.getAccessToken();
+      const response = await fetch(`${this.config.baseUrl}/health`, {
+        signal,
+        headers: { Authorization: `Bearer ${token}` },
+      });
       return response.ok;
     } catch {
       return false;
@@ -42,7 +61,11 @@ export class BackendInferenceProvider implements InferenceProvider {
     const token = await this.config.getAccessToken();
     const response = await fetch(`${this.config.baseUrl}/v1/generate`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Gear-X-Remote-Consent': 'granted',
+      },
       signal: request.signal,
       body: JSON.stringify({
         system: request.system,
@@ -52,7 +75,7 @@ export class BackendInferenceProvider implements InferenceProvider {
         capability: request.capability,
       }),
     });
-    if (!response.ok) throw new GearXError('PROVIDER_UNAVAILABLE', `Backend returned ${response.status}.`);
+    if (!response.ok) throw await backendFailure(response);
     const payload = (await response.json()) as { text?: string };
     if (!payload.text?.trim()) throw new GearXError('INVALID_MODEL_OUTPUT', 'Backend returned no text.');
     return payload.text.trim();

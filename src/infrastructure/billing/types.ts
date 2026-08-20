@@ -1,10 +1,11 @@
 import { EntitlementSnapshot } from '../../domain/entitlements';
+import { PurchasableGearXPlan } from '../../domain/plans';
 
 export interface BillingProvider {
   readonly configured: boolean;
   initialize(appUserId: string): Promise<void>;
   restorePurchases(): Promise<void>;
-  presentUpgrade(): Promise<void>;
+  purchase(planId: PurchasableGearXPlan): Promise<void>;
   presentManagement(): Promise<void>;
 }
 

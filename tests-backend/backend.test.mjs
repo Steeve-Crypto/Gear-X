@@ -31,7 +31,7 @@ function fixture(overrides = {}) {
       return { allowed: true, remaining: 4, usageId: 7, modelClass: 'standard' };
     },
     completeUsage: async (usageId, result) => calls.completions.push({ usageId, ...result }),
-    getEntitlementSummary: async () => ({ planId: 'baseline', displayName: 'Local access', status: 'none', capabilities: [], allowances: {} }),
+    getEntitlementSummary: async () => ({ planId: 'free', displayName: 'GearX Free', status: 'none', capabilities: [], allowances: {} }),
     handleBillingWebhook: async () => { calls.webhooks += 1; },
     transcribe: async ({ durationMs }) => {
       calls.transcriptions += 1;
@@ -173,17 +173,18 @@ test('enforces quota and rate-limit reservations', async () => {
   }
 });
 
-test('baseline entitlement and global kill switch fail before provider access', async () => {
+test('free and Developer client claims cannot bypass entitlement or kill switch', async () => {
   for (const [reason, code] of [['entitlement', ERROR_CODES.ENTITLEMENT_REQUIRED], ['disabled', ERROR_CODES.CLOUD_DISABLED]]) {
     const { handler, calls } = fixture({ reserveUsage: async (request) => {
       calls.reservations.push(request);
       return { allowed: false, reason, remaining: 0 };
     } });
-    const response = await handler(generateRequest({ plan: 'paid', remaining: 999999 }));
+    const response = await handler(generateRequest({ plan: 'max', remaining: 999999, processingMode: 'developer' }));
     assert.equal((await response.json()).error.code, code);
     assert.equal(calls.generations, 0);
     assert.equal(calls.reservations[0].userId, 'server-user');
     assert.equal('plan' in calls.reservations[0], false);
+    assert.equal('processingMode' in calls.reservations[0], false);
   }
 });
 
@@ -192,14 +193,16 @@ test('meters transcription duration and intelligence token reservation', async (
   await handler(transcriptionRequest({ durationMs: 12_345 }));
   await handler(generateRequest({ maxTokens: 200 }));
   assert.equal(calls.reservations[0].durationMs, 12_345);
-  assert.equal(calls.reservations[0].reservedTokens, 0);
-  assert.ok(calls.reservations[1].reservedTokens >= 200);
+  assert.equal(calls.reservations[0].reservedInputTokens, 0);
+  assert.equal(calls.reservations[0].reservedOutputTokens, 0);
+  assert.ok(calls.reservations[1].reservedInputTokens > 0);
+  assert.equal(calls.reservations[1].reservedOutputTokens, 200);
 });
 
 test('serves server-authoritative entitlement state', async () => {
   const { handler } = fixture({ getEntitlementSummary: async (userId) => ({
-    planId: 'cloud_standard', displayName: 'Cloud access', status: 'active', userId,
-    capabilities: ['cloud_transcription'], allowances: { transcriptionDailyMsRemaining: 10_000 },
+    planId: 'pro', displayName: 'GearX Pro', status: 'active', userId,
+    capabilities: ['cloud_transcription'], allowances: { transcriptionMonthlyMsRemaining: 10_000 },
   }) });
   const response = await handler(new Request('https://example.test/functions/v1/gear-x/v1/entitlements', {
     headers: { Authorization: 'Bearer valid-token' },

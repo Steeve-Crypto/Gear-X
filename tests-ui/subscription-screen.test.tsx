@@ -7,19 +7,23 @@ jest.mock('../src/services/billing', () => ({
   billingService: {
     fetchEntitlement: jest.fn(),
     restore: jest.fn(),
-    upgrade: jest.fn(),
+    purchase: jest.fn(),
     manage: jest.fn(),
   },
 }));
 
 const paidSnapshot = {
-  planId: 'cloud-plus',
-  displayName: 'Cloud Plus',
+  planId: 'pro' as const,
+  displayName: 'GearX Pro',
   status: 'active' as const,
   capabilities: ['cloud_transcription' as const, 'cloud_summarization' as const],
   expiresAt: '2026-09-20T00:00:00.000Z',
   cancelAtPeriodEnd: false,
-  allowances: { transcriptionDailyMsRemaining: 5_400_000, intelligenceMonthlyTokensRemaining: 10_000 },
+  pendingPlanId: null,
+  pendingEffectiveAt: null,
+  periodStartedAt: '2026-08-20T00:00:00.000Z',
+  resetsAt: '2026-09-20T00:00:00.000Z',
+  allowances: { transcriptionMonthlyMsRemaining: 24_120_000, intelligencePercentRemaining: 72 },
 };
 
 describe('<SubscriptionScreen />', () => {
@@ -35,21 +39,37 @@ describe('<SubscriptionScreen />', () => {
 
   test('shows understandable plan and allowance information', async () => {
     render(<SubscriptionScreen />);
-    expect(screen.getByText('Cloud Plus')).toBeTruthy();
-    expect(screen.getByText('1h 30m remaining')).toBeTruthy();
-    expect(screen.getByText('Available within your monthly plan allowance')).toBeTruthy();
+    expect(screen.getByText('GearX Pro · Current plan')).toBeTruthy();
+    expect(screen.getByText('6h 42m of 10 hours remaining')).toBeTruthy();
+    expect(screen.getByText('72% remaining')).toBeTruthy();
+    expect(screen.getByText('GearX Free')).toBeTruthy();
+    expect(screen.getByText('GearX Max')).toBeTruthy();
     await waitFor(() => expect(billingService.fetchEntitlement).toHaveBeenCalled());
   });
 
   test('restore refreshes the server-verified snapshot', async () => {
     jest.mocked(billingService.restore).mockResolvedValue({
       ...paidSnapshot,
-      displayName: 'Restored Plan',
+      planId: 'max',
+      displayName: 'GearX Max',
     });
     render(<SubscriptionScreen />);
     await waitFor(() => expect(billingService.fetchEntitlement).toHaveBeenCalled());
     fireEvent.press(screen.getByRole('button', { name: 'Restore purchases' }));
-    expect(await screen.findByText('Restored Plan')).toBeTruthy();
+    expect(await screen.findByText('GearX Max · Current plan')).toBeTruthy();
     expect(screen.getByText('Purchases restored and cloud access refreshed.')).toBeTruthy();
+  });
+
+  test('purchases Max through the billing provider and refreshes authority', async () => {
+    jest.mocked(billingService.purchase).mockResolvedValue({
+      ...paidSnapshot,
+      planId: 'max',
+      displayName: 'GearX Max',
+    });
+    render(<SubscriptionScreen />);
+    await waitFor(() => expect(billingService.fetchEntitlement).toHaveBeenCalled());
+    fireEvent.press(screen.getByRole('button', { name: 'Choose GearX Max' }));
+    await waitFor(() => expect(billingService.purchase).toHaveBeenCalledWith('max'));
+    expect(await screen.findByText('Purchase verified and cloud access refreshed.')).toBeTruthy();
   });
 });

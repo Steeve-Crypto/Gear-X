@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 import RevenueCatUI from 'react-native-purchases-ui';
 import { GearXError } from '../../domain/errors';
+import { publicPlan, PurchasableGearXPlan } from '../../domain/plans';
 import { BillingProvider } from './types';
 
 function platformKey(): string {
@@ -31,8 +32,19 @@ export class RevenueCatBillingProvider implements BillingProvider {
     await Purchases.restorePurchases();
   }
 
-  async presentUpgrade(): Promise<void> {
-    await RevenueCatUI.presentPaywall({ displayCloseButton: true });
+  async purchase(planId: PurchasableGearXPlan): Promise<void> {
+    const definition = publicPlan(planId);
+    const offerings = await Purchases.getOfferings();
+    const offering = offerings.all.default ?? offerings.current;
+    const selected = offering?.availablePackages.find((item) => (
+      item.identifier === definition.revenueCatPackageId
+      || item.product.identifier === definition.appleProductId
+      || item.product.identifier.split(':', 1)[0] === definition.googleProductId
+    ));
+    if (!selected) {
+      throw new GearXError('BILLING_UNAVAILABLE', 'The selected monthly plan is not available from the store.');
+    }
+    await Purchases.purchasePackage(selected);
   }
 
   async presentManagement(): Promise<void> {

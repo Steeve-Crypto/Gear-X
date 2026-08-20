@@ -10,13 +10,17 @@ import { BillingProvider } from '../src/infrastructure/billing/types';
 import { configuredBackendUrl, getConfiguredBackendIdentity } from '../src/services/providerFactory';
 
 const paidSnapshot = {
-  planId: 'cloud-plus',
-  displayName: 'Cloud Plus',
+  planId: 'pro' as const,
+  displayName: 'GearX Pro',
   status: 'active' as const,
   capabilities: ['cloud_transcription' as const, 'cloud_summarization' as const],
   expiresAt: '2026-09-20T00:00:00.000Z',
   cancelAtPeriodEnd: false,
-  allowances: { transcriptionDailyMsRemaining: 3_600_000, intelligenceMonthlyTokensRemaining: 20_000 },
+  pendingPlanId: null,
+  pendingEffectiveAt: null,
+  periodStartedAt: '2026-08-20T00:00:00.000Z',
+  resetsAt: '2026-09-20T00:00:00.000Z',
+  allowances: { transcriptionMonthlyMsRemaining: 3_600_000, intelligencePercentRemaining: 72 },
 };
 
 function billingMock(): jest.Mocked<BillingProvider> {
@@ -24,7 +28,7 @@ function billingMock(): jest.Mocked<BillingProvider> {
     configured: true,
     initialize: jest.fn(async (_appUserId: string) => undefined),
     restorePurchases: jest.fn(async () => undefined),
-    presentUpgrade: jest.fn(async () => undefined),
+    purchase: jest.fn(async (_planId: 'pro' | 'max') => undefined),
     presentManagement: jest.fn(async () => undefined),
   };
 }
@@ -53,14 +57,23 @@ describe('billing service', () => {
     const request = jest.fn(async () => ({ ok: true, json: async () => paidSnapshot } as Response));
     const service = new BillingService(billing, request);
 
-    await expect(service.upgrade()).resolves.toEqual(paidSnapshot);
-    expect(billing.presentUpgrade).toHaveBeenCalledTimes(1);
+    await expect(service.purchase('pro')).resolves.toEqual(paidSnapshot);
+    expect(billing.purchase).toHaveBeenCalledWith('pro');
     expect(request).toHaveBeenCalledTimes(1);
   });
 
   test('returns local baseline when no backend exists', async () => {
     jest.mocked(configuredBackendUrl).mockReturnValueOnce('');
     const service = new BillingService(billingMock(), jest.fn());
-    await expect(service.fetchEntitlement()).resolves.toMatchObject({ planId: 'baseline', capabilities: [] });
+    await expect(service.fetchEntitlement()).resolves.toMatchObject({ planId: 'free', capabilities: [] });
+  });
+
+  test('rejects an unknown server plan instead of trusting it', async () => {
+    const request = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ ...paidSnapshot, planId: 'forged-unlimited' }),
+    } as Response));
+    const service = new BillingService(billingMock(), request);
+    await expect(service.fetchEntitlement()).rejects.toMatchObject({ code: 'BILLING_UNAVAILABLE' });
   });
 });

@@ -1,6 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { BackendError, createGearXHandler, ERROR_CODES } from './core.mjs';
-import { isSubscriptionEffective, normalizeRevenueCatEvent, verifyRevenueCatWebhookSignature } from './billing.mjs';
+import {
+  isSubscriptionEffective,
+  normalizeRevenueCatEvent,
+  normalizeRevenueCatStore,
+  normalizeStoreProductId,
+  verifyRevenueCatWebhookSignature,
+} from './billing.mjs';
 
 const required = (name: string): string => {
   const value = Deno.env.get(name);
@@ -28,15 +34,13 @@ const limits = {
   maxPromptChars: integerSetting('GEAR_X_MAX_PROMPT_CHARS', 16_000),
   maxOutputTokens: integerSetting('GEAR_X_MAX_OUTPUT_TOKENS', 1_200),
   maxGenerateBytes: integerSetting('GEAR_X_MAX_GENERATE_BYTES', 24_000),
-  maxAudioBytes: integerSetting('GEAR_X_MAX_AUDIO_BYTES', 10 * 1024 * 1024),
-  maxAudioDurationMs: integerSetting('GEAR_X_MAX_AUDIO_DURATION_MS', 15 * 60 * 1_000),
+  maxAudioBytes: integerSetting('GEAR_X_MAX_AUDIO_BYTES', 40 * 1024 * 1024),
+  maxAudioDurationMs: integerSetting('GEAR_X_MAX_AUDIO_DURATION_MS', 2 * 60 * 60 * 1_000),
   multipartOverheadBytes: 64 * 1024,
   intelligenceDailyLimit: integerSetting('GEAR_X_INTELLIGENCE_DAILY_LIMIT', 50),
   transcriptionDailyLimit: integerSetting('GEAR_X_TRANSCRIPTION_DAILY_LIMIT', 20),
   requestsPerMinute: integerSetting('GEAR_X_REQUESTS_PER_MINUTE', 10),
   providerTimeoutMs: integerSetting('GEAR_X_PROVIDER_TIMEOUT_MS', 25_000),
-  sttMicrosPerHour: integerSetting('GEAR_X_STT_MICROS_PER_HOUR', 100_000),
-  intelligenceMicrosPerMillionReserved: integerSetting('GEAR_X_INTELLIGENCE_MICROS_PER_MILLION_RESERVED', 10_000_000),
 };
 
 async function providerFetch(url: string, init: RequestInit, signal: AbortSignal): Promise<Response> {
@@ -83,33 +87,34 @@ const handler = createGearXHandler({
     const { data, error } = await admin.auth.getUser(token);
     return error ? null : data.user;
   },
-  reserveUsage: async ({ userId, capability, provider, bytes, durationMs, reservedTokens }: {
-    userId: string; capability: string; provider: string; bytes: number; durationMs: number; reservedTokens: number;
+  reserveUsage: async ({ userId, capability, provider, bytes, durationMs, reservedInputTokens, reservedOutputTokens }: {
+    userId: string; capability: string; provider: string; bytes: number; durationMs: number;
+    reservedInputTokens: number; reservedOutputTokens: number;
   }) => {
-    const estimatedCostMicros = capability === 'cloud_transcription'
-      ? Math.ceil((durationMs / 3_600_000) * limits.sttMicrosPerHour)
-      : Math.ceil((reservedTokens / 1_000_000) * limits.intelligenceMicrosPerMillionReserved);
     const { data, error } = await admin.rpc('reserve_gear_x_entitled_usage', {
       p_user_id: userId,
       p_capability: capability,
       p_provider: provider,
       p_request_bytes: bytes,
       p_duration_ms: durationMs,
-      p_reserved_tokens: reservedTokens,
-      p_estimated_cost_micros: estimatedCostMicros,
+      p_reserved_input_tokens: reservedInputTokens,
+      p_reserved_output_tokens: reservedOutputTokens,
     });
     if (error || !data?.[0]) {
       throw new BackendError(ERROR_CODES.INTERNAL_ERROR, 'Usage accounting is unavailable.', 500);
     }
     return data[0];
   },
-  completeUsage: async (usageId: number, result: { status: string; inputTokens?: number; outputTokens?: number }) => {
+  completeUsage: async (usageId: number, result: {
+    status: string; inputTokens?: number; outputTokens?: number; actualCostMicros?: number;
+  }) => {
     if (!usageId) return;
     const { error } = await admin.rpc('complete_gear_x_cloud_usage', {
       p_usage_id: usageId,
       p_status: result.status,
       p_input_tokens: result.inputTokens ?? null,
       p_output_tokens: result.outputTokens ?? null,
+      p_actual_cost_micros: result.actualCostMicros ?? null,
     });
     if (error) throw new BackendError(ERROR_CODES.INTERNAL_ERROR, 'Usage accounting is unavailable.', 500);
   },
@@ -120,21 +125,34 @@ const handler = createGearXHandler({
       expiresAt: subscription.expires_at ? Date.parse(subscription.expires_at) : null,
       graceExpiresAt: subscription.grace_expires_at ? Date.parse(subscription.grace_expires_at) : null,
     } : null);
-    const planId = effective ? subscription.plan_id : 'baseline';
+    const planId = effective ? subscription.plan_id : 'free';
     const { data: plan, error } = await admin.from('gear_x_plan_definitions').select('*').eq('id', planId).single();
     if (error || !plan) throw new BackendError(ERROR_CODES.INTERNAL_ERROR, 'Entitlement state is unavailable.', 500);
-    const dayStart = new Date(); dayStart.setUTCHours(0, 0, 0, 0);
-    const monthStart = new Date(Date.UTC(dayStart.getUTCFullYear(), dayStart.getUTCMonth(), 1));
+    const now = new Date();
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const periodStart = effective && subscription.current_period_started_at
+      ? new Date(subscription.current_period_started_at) : monthStart;
+    const resetsAt = effective
+      ? (subscription.expires_at ?? subscription.grace_expires_at ?? nextMonth.toISOString())
+      : nextMonth.toISOString();
     const { data: usage } = await admin.from('gear_x_cloud_usage')
-      .select('capability,duration_ms,reserved_tokens,input_tokens,output_tokens,created_at')
-      .eq('user_id', userId).gte('created_at', monthStart.toISOString());
+      .select('capability,duration_ms,reserved_input_tokens,reserved_output_tokens,input_tokens,output_tokens,estimated_cost_micros,actual_cost_micros,created_at')
+      .eq('user_id', userId).gte('created_at', periodStart.toISOString());
     const rows = usage ?? [];
-    const daily = rows.filter((row) => Date.parse(row.created_at) >= dayStart.getTime());
-    const usedDailyDuration = daily.reduce((sum, row) => sum + Number(row.duration_ms || 0), 0);
-    const usedMonthlyTokens = rows.reduce((sum, row) => sum + Number(
-      row.input_tokens == null || row.output_tokens == null
-        ? row.reserved_tokens : row.input_tokens + row.output_tokens,
-    ), 0);
+    const usedPeriodDuration = rows.reduce((sum, row) => sum + Number(row.duration_ms || 0), 0);
+    const usedInputTokens = rows.reduce((sum, row) => sum + Number(row.input_tokens ?? row.reserved_input_tokens ?? 0), 0);
+    const usedOutputTokens = rows.reduce((sum, row) => sum + Number(row.output_tokens ?? row.reserved_output_tokens ?? 0), 0);
+    const usedCost = rows.reduce((sum, row) => sum + Number(row.actual_cost_micros ?? row.estimated_cost_micros ?? 0), 0);
+    const ratios = [
+      Number(plan.intelligence_monthly_input_tokens) > 0
+        ? 1 - usedInputTokens / Number(plan.intelligence_monthly_input_tokens) : 0,
+      Number(plan.intelligence_monthly_output_tokens) > 0
+        ? 1 - usedOutputTokens / Number(plan.intelligence_monthly_output_tokens) : 0,
+      Number(plan.monthly_provider_budget_micros) > 0
+        ? 1 - usedCost / Number(plan.monthly_provider_budget_micros) : 0,
+    ];
+    const costTicks = Number(body.usage?.cost_in_usd_ticks);
     return {
       planId: plan.id,
       displayName: plan.display_name,
@@ -142,9 +160,13 @@ const handler = createGearXHandler({
       capabilities: plan.cloud_capabilities,
       expiresAt: effective ? subscription.expires_at : null,
       cancelAtPeriodEnd: effective ? subscription.cancel_at_period_end : false,
+      pendingPlanId: effective ? subscription.pending_plan_id : null,
+      pendingEffectiveAt: effective ? subscription.pending_effective_at : null,
+      periodStartedAt: periodStart.toISOString(),
+      resetsAt,
       allowances: {
-        transcriptionDailyMsRemaining: Math.max(Number(plan.transcription_daily_ms) - usedDailyDuration, 0),
-        intelligenceMonthlyTokensRemaining: Math.max(Number(plan.intelligence_monthly_tokens) - usedMonthlyTokens, 0),
+        transcriptionMonthlyMsRemaining: Math.max(Number(plan.transcription_monthly_ms) - usedPeriodDuration, 0),
+        intelligencePercentRemaining: Math.max(0, Math.min(100, Math.floor(Math.min(...ratios) * 100))),
       },
     };
   },
@@ -168,11 +190,21 @@ const handler = createGearXHandler({
       throw new BackendError(ERROR_CODES.INVALID_REQUEST, 'Webhook JSON is malformed.', 400);
     }
     const event = payload.event;
-    const productId = typeof event?.product_id === 'string' ? event.product_id : '';
-    const { data: mapping } = productId
-      ? await admin.from('gear_x_billing_product_mappings').select('plan_id').eq('product_id', productId).eq('active', true).maybeSingle()
+    const rawProductId = event?.type === 'PRODUCT_CHANGE' && typeof event?.new_product_id === 'string'
+      ? event.new_product_id
+      : typeof event?.product_id === 'string' ? event.product_id : '';
+    const store = normalizeRevenueCatStore(event?.store);
+    const productId = normalizeStoreProductId(rawProductId, store);
+    const { data: mapping } = productId && store
+      ? await admin.from('gear_x_billing_product_mappings').select('plan_id,revenuecat_entitlement_id,store')
+        .eq('product_id', productId).eq('store', store).eq('active', true).maybeSingle()
       : { data: null };
-    const normalized = normalizeRevenueCatEvent(event, mapping?.plan_id ?? null);
+    const normalized = normalizeRevenueCatEvent(event, mapping ? {
+      planId: mapping.plan_id,
+      productId,
+      revenuecatEntitlementId: mapping.revenuecat_entitlement_id,
+      store: mapping.store,
+    } : null);
     if (!normalized || !/^[0-9a-f-]{36}$/i.test(normalized.userId)) {
       throw new BackendError(ERROR_CODES.INVALID_REQUEST, 'Webhook event is invalid.', 400);
     }
@@ -184,10 +216,14 @@ const handler = createGearXHandler({
       p_product_id: normalized.productId,
       p_plan_id: normalized.planId,
       p_status: normalized.status,
+      p_period_started_at: normalized.periodStartedAt ? new Date(normalized.periodStartedAt).toISOString() : null,
       p_expires_at: normalized.expiresAt ? new Date(normalized.expiresAt).toISOString() : null,
       p_grace_expires_at: normalized.graceExpiresAt ? new Date(normalized.graceExpiresAt).toISOString() : null,
       p_cancel_at_period_end: normalized.cancelAtPeriodEnd,
       p_environment: normalized.environment,
+      p_store: normalized.store,
+      p_revenuecat_entitlement_id: normalized.revenuecatEntitlementId,
+      p_pending_change: normalized.pendingChange,
     });
     if (error) throw new BackendError(ERROR_CODES.INTERNAL_ERROR, 'Billing synchronization failed.', 500);
   },
@@ -211,7 +247,10 @@ const handler = createGearXHandler({
     if (!response.ok) {
       throw new BackendError(ERROR_CODES.PROVIDER_UNAVAILABLE, 'The provider rejected the request.', 503);
     }
-    let body: { choices?: { message?: { content?: string } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+    let body: {
+      choices?: { message?: { content?: string } }[];
+      usage?: { prompt_tokens?: number; completion_tokens?: number; cost_in_usd_ticks?: number | string };
+    };
     try { body = await response.json(); } catch {
       throw new BackendError(ERROR_CODES.MALFORMED_PROVIDER_OUTPUT, 'Provider returned invalid data.', 502);
     }
@@ -219,6 +258,8 @@ const handler = createGearXHandler({
       text: body.choices?.[0]?.message?.content ?? '',
       inputTokens: body.usage?.prompt_tokens,
       outputTokens: body.usage?.completion_tokens,
+      actualCostMicros: Number.isFinite(costTicks) && costTicks >= 0
+        ? Math.ceil(costTicks / 10_000) : undefined,
     };
   },
   transcribe: async ({ file, durationMs }: { file: File; durationMs: number }, signal: AbortSignal) => {

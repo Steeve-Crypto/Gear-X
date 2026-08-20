@@ -62,10 +62,23 @@ export async function verifyRevenueCatWebhookSignature(
   return different === 0;
 }
 
-export function normalizeRevenueCatEvent(event, planId) {
+export function normalizeRevenueCatStore(store) {
+  if (store === 'APP_STORE' || store === 'MAC_APP_STORE') return 'app_store';
+  if (store === 'PLAY_STORE') return 'play_store';
+  if (store === 'STRIPE' || store === 'PROMOTIONAL') return 'test';
+  return null;
+}
+
+export function normalizeStoreProductId(productId, store) {
+  if (typeof productId !== 'string') return '';
+  return store === 'play_store' ? productId.split(':', 1)[0] : productId;
+}
+
+export function normalizeRevenueCatEvent(event, mapping) {
   if (!event || typeof event !== 'object' || typeof event.id !== 'string'
     || typeof event.type !== 'string' || typeof event.app_user_id !== 'string') return null;
   const occurredAt = Number(event.event_timestamp_ms ?? Date.now());
+  const periodStartedAt = Number(event.purchased_at_ms ?? 0) || null;
   const expiresAt = Number(event.expiration_at_ms ?? 0) || null;
   const graceExpiresAt = Number(event.grace_period_expiration_at_ms ?? 0) || null;
   const reason = String(event.cancel_reason ?? event.expiration_reason ?? '');
@@ -76,6 +89,8 @@ export function normalizeRevenueCatEvent(event, planId) {
     case 'RENEWAL':
     case 'UNCANCELLATION':
     case 'SUBSCRIPTION_EXTENDED':
+      status = 'active';
+      break;
     case 'PRODUCT_CHANGE':
       status = 'active';
       break;
@@ -96,15 +111,22 @@ export function normalizeRevenueCatEvent(event, planId) {
       return null;
   }
   const transferredTo = Array.isArray(event.transferred_to) ? event.transferred_to[0] : null;
+  const entitlementIds = Array.isArray(event.entitlement_ids) ? event.entitlement_ids : [];
+  if (event.type !== 'PRODUCT_CHANGE' && mapping?.revenuecatEntitlementId && entitlementIds.length
+    && !entitlementIds.includes(mapping.revenuecatEntitlementId)) return null;
   return {
     eventId: event.id,
     eventType: event.type,
     eventAt: occurredAt,
     userId: typeof transferredTo === 'string' && transferredTo ? transferredTo : event.app_user_id,
     sourceUserId: event.app_user_id,
-    productId: typeof event.product_id === 'string' ? event.product_id : null,
-    planId,
+    productId: mapping?.productId ?? (typeof event.product_id === 'string' ? event.product_id : null),
+    planId: mapping?.planId ?? null,
+    store: mapping?.store ?? normalizeRevenueCatStore(event.store),
+    revenuecatEntitlementId: mapping?.revenuecatEntitlementId ?? null,
+    pendingChange: event.type === 'PRODUCT_CHANGE',
     status,
+    periodStartedAt,
     expiresAt,
     graceExpiresAt,
     cancelAtPeriodEnd,

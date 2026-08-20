@@ -1,5 +1,6 @@
 import { baselineEntitlement, EntitlementSnapshot } from '../domain/entitlements';
 import { GearXError } from '../domain/errors';
+import { isGearXPlanId, PurchasableGearXPlan } from '../domain/plans';
 import { BillingProvider } from '../infrastructure/billing/types';
 import { configuredBackendUrl, getConfiguredBackendIdentity } from './providerFactory';
 
@@ -25,7 +26,11 @@ export class BillingService {
       headers: { Authorization: `Bearer ${identity.accessToken}` },
     });
     if (!response.ok) throw new GearXError('BILLING_UNAVAILABLE', 'Cloud access could not be refreshed.');
-    return response.json() as Promise<EntitlementSnapshot>;
+    const snapshot = await response.json() as EntitlementSnapshot;
+    if (!isGearXPlanId(snapshot.planId)) {
+      throw new GearXError('BILLING_UNAVAILABLE', 'Cloud access returned an unknown plan.');
+    }
+    return snapshot;
   }
 
   async restore(): Promise<EntitlementSnapshot> {
@@ -36,11 +41,11 @@ export class BillingService {
     return this.fetchEntitlement();
   }
 
-  async upgrade(): Promise<EntitlementSnapshot> {
+  async purchase(planId: PurchasableGearXPlan): Promise<EntitlementSnapshot> {
     const identity = await getConfiguredBackendIdentity();
     const billing = await this.billingProvider();
     await billing.initialize(identity.userId);
-    await billing.presentUpgrade();
+    await billing.purchase(planId);
     return this.fetchEntitlement();
   }
 

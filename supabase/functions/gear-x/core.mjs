@@ -230,7 +230,9 @@ export function createGearXHandler(deps) {
         if (!cloudCapability) throw new BackendError(ERROR_CODES.INVALID_REQUEST, 'Capability is unsupported.', 400);
         const reservation = await deps.reserveUsage({
           userId: user.id, capability: cloudCapability, provider: 'xai', bytes: actualBytes,
-          durationMs: 0, reservedTokens: Math.ceil((payload.system.length + payload.prompt.length) / 4) + payload.maxTokens,
+          durationMs: 0,
+          reservedInputTokens: Math.ceil((payload.system.length + payload.prompt.length) / 4),
+          reservedOutputTokens: payload.maxTokens,
         });
         if (!reservation.allowed) throw reservationError(reservation);
         let generated;
@@ -245,11 +247,13 @@ export function createGearXHandler(deps) {
         try { text = validateCapabilityOutput(payload.capability, raw); } catch (error) {
           await deps.completeUsage(reservation.usageId, {
             status: 'malformed_output', inputTokens: generated.inputTokens, outputTokens: generated.outputTokens,
+            actualCostMicros: generated.actualCostMicros,
           });
           throw error;
         }
         await deps.completeUsage(reservation.usageId, {
           status: 'completed', inputTokens: generated.inputTokens, outputTokens: generated.outputTokens,
+          actualCostMicros: generated.actualCostMicros,
         });
         status = 200; code = 'OK';
         return success({ text, usage: { remaining: reservation.remaining } });
@@ -276,7 +280,7 @@ export function createGearXHandler(deps) {
         const audio = validateAudio(file, durationMs, limits);
         const reservation = await deps.reserveUsage({
           userId: user.id, capability: 'cloud_transcription', provider: 'xai', bytes: file.size,
-          durationMs: audio.durationMs, reservedTokens: 0,
+          durationMs: audio.durationMs, reservedInputTokens: 0, reservedOutputTokens: 0,
         });
         if (!reservation.allowed) throw reservationError(reservation);
         let result;

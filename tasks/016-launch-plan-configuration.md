@@ -14,4 +14,4 @@ Focused plan economics, mapping, billing-period, lifecycle, spoofing, mode/fallb
 ## Rollback considerations
 Cloud remains disabled by default. Function rollback precedes database signature rollback; billing and usage reconciliation history is retained.
 ## Completion status
-In progress. Approved economics and verification requirements are specified; implementation and external store configuration remain separate.
+Implemented and locally verified. Free/Pro/Max plans, exact cross-store and RevenueCat mappings, independent capability/input/output limits, verified billing-period resets, pending downgrade semantics, per-user spend caps, standard/premium capability routing, consumer plan/usage/purchase UI, documentation, full validation, Android export, and secret scan are complete. Store/RevenueCat/Supabase creation, signed purchases, live webhooks, physical devices, reviewed production global budgets, and provider enablement remain external and are not claimed complete.

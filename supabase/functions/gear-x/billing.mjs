@@ -32,6 +32,36 @@ export function isSubscriptionEffective(subscription, nowMs = Date.now()) {
   return false;
 }
 
+export async function verifyRevenueCatWebhookSignature(
+  rawBody,
+  signatureHeader,
+  secret,
+  nowMs = Date.now(),
+  toleranceSeconds = 300,
+) {
+  if (typeof rawBody !== 'string' || typeof signatureHeader !== 'string' || !secret) return false;
+  const parts = Object.fromEntries(signatureHeader.split(',').map((part) => {
+    const separator = part.indexOf('=');
+    return separator > 0 ? [part.slice(0, separator), part.slice(separator + 1)] : ['', ''];
+  }));
+  if (!/^\d+$/.test(parts.t ?? '') || !/^[0-9a-f]{64}$/i.test(parts.v1 ?? '')) return false;
+  const timestamp = Number(parts.t);
+  if (!Number.isSafeInteger(timestamp)
+    || Math.abs(Math.floor(nowMs / 1000) - timestamp) > toleranceSeconds) return false;
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC', key, new TextEncoder().encode(`${parts.t}.${rawBody}`),
+  );
+  const computed = [...new Uint8Array(signature)].map((value) => value.toString(16).padStart(2, '0')).join('');
+  let different = computed.length ^ parts.v1.length;
+  for (let index = 0; index < computed.length; index += 1) {
+    different |= computed.charCodeAt(index) ^ (parts.v1.charCodeAt(index) || 0);
+  }
+  return different === 0;
+}
+
 export function normalizeRevenueCatEvent(event, planId) {
   if (!event || typeof event !== 'object' || typeof event.id !== 'string'
     || typeof event.type !== 'string' || typeof event.app_user_id !== 'string') return null;
@@ -81,4 +111,3 @@ export function normalizeRevenueCatEvent(event, planId) {
     environment: event.environment === 'PRODUCTION' ? 'production' : 'sandbox',
   };
 }
-

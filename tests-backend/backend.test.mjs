@@ -251,5 +251,6 @@ test('client and committed source contain no secret values', async () => {
     assert.doesNotMatch(value, /xai-[A-Za-z0-9_-]{20,}/, file);
     assert.doesNotMatch(value, /(?:service_role|sb_secret)_[A-Za-z0-9_-]{20,}/, file);
     assert.doesNotMatch(value, /XAI_API_KEY\s*=\s*[^\s#]+/, file);
+    assert.doesNotMatch(value, /REVENUECAT_(?:SECRET|WEBHOOK_(?:AUTHORIZATION|SIGNING_SECRET))\s*=\s*[^\s#]+/, file);
   }
 });

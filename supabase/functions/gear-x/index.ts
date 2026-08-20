@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { BackendError, createGearXHandler, ERROR_CODES } from './core.mjs';
-import { isSubscriptionEffective, normalizeRevenueCatEvent } from './billing.mjs';
+import { isSubscriptionEffective, normalizeRevenueCatEvent, verifyRevenueCatWebhookSignature } from './billing.mjs';
 
 const required = (name: string): string => {
   const value = Deno.env.get(name);
@@ -18,6 +18,7 @@ const supabaseAnonKey = required('SUPABASE_ANON_KEY');
 const supabaseServiceKey = required('SUPABASE_SERVICE_ROLE_KEY');
 const xaiApiKey = Deno.env.get('XAI_API_KEY') ?? '';
 const revenueCatWebhookAuthorization = required('REVENUECAT_WEBHOOK_AUTHORIZATION');
+const revenueCatWebhookSigningSecret = required('REVENUECAT_WEBHOOK_SIGNING_SECRET');
 const admin = createClient(supabaseUrl, supabaseServiceKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
@@ -154,6 +155,13 @@ const handler = createGearXHandler({
     const raw = await request.text();
     if (new TextEncoder().encode(raw).byteLength > 64 * 1024) {
       throw new BackendError(ERROR_CODES.PAYLOAD_TOO_LARGE, 'Webhook payload is too large.', 413);
+    }
+    if (!await verifyRevenueCatWebhookSignature(
+      raw,
+      request.headers.get('x-revenuecat-webhook-signature'),
+      revenueCatWebhookSigningSecret,
+    )) {
+      throw new BackendError(ERROR_CODES.UNAUTHORIZED, 'Webhook signature verification failed.', 401);
     }
     let payload: { event?: Record<string, unknown> };
     try { payload = JSON.parse(raw); } catch {

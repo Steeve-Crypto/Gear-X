@@ -5,6 +5,7 @@ import {
   cloudCapabilityForInference,
   isSubscriptionEffective,
   normalizeRevenueCatEvent,
+  verifyRevenueCatWebhookSignature,
 } from '../supabase/functions/gear-x/billing.mjs';
 
 const now = Date.UTC(2026, 7, 20);
@@ -54,6 +55,21 @@ test('store transfer associates restore with replacement anonymous identity', ()
   const normalized = normalizeRevenueCatEvent(event('TRANSFER', { transferred_to: [replacement] }), 'cloud_standard');
   assert.equal(normalized.userId, replacement);
   assert.equal(normalized.sourceUserId, '11111111-1111-4111-8111-111111111111');
+});
+
+test('verifies raw-body HMAC and rejects replayed signatures', async () => {
+  const raw = '{"event":{"id":"event-1"}}';
+  const timestamp = Math.floor(now / 1000);
+  const secret = 'revenuecat-test-signing-secret';
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+  );
+  const bytes = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${timestamp}.${raw}`));
+  const hex = [...new Uint8Array(bytes)].map((value) => value.toString(16).padStart(2, '0')).join('');
+  const header = `t=${timestamp},v1=${hex}`;
+  assert.equal(await verifyRevenueCatWebhookSignature(raw, header, secret, now), true);
+  assert.equal(await verifyRevenueCatWebhookSignature(`${raw} `, header, secret, now), false);
+  assert.equal(await verifyRevenueCatWebhookSignature(raw, header, secret, now + 301_000), false);
 });
 
 test('database reservation serializes duration token rate and budget checks', async () => {

@@ -21,10 +21,10 @@ Use a capability router rather than a single application-wide AI provider.
 1. **Transcription:** prefer native Apple Speech or Android SpeechRecognizer through `expo-speech-recognition`; use recorded-file input where the OS supports it. Private mode never falls back remotely. Balanced mode may use the Gear X backend only after consent and when configured. Quality mode prefers that backend. Developer mode can use a local Whisper server.
 2. **Knowledge intelligence:** keep the existing deterministic Extractor, Weaver, Summarizer, and Questioner paths as the universal baseline. Optional device or remote text providers refine individual tasks. Router, Listener, Visualizer, Retriever, and Archivist do not require an LLM.
 3. **Retrieval:** search the local SQLite vault first with an FTS5 index when the platform SQLite build supports it and an indexed lexical fallback otherwise. Send only selected evidence to an optional synthesis provider. SQLite remains the durable source of truth.
-4. **Consumer cloud:** the app talks only to a Gear X backend with a short-lived session credential. Provider secrets remain server-side. Remote audio or evidence requires persisted consent and a visible state.
+4. **Consumer cloud:** the app talks only to a Gear X backend with a short-lived session credential. Provider secrets remain server-side. Remote audio or evidence requires persisted consent, a server-authoritative capability entitlement, remaining quota/budget, and a visible state. Processing mode cannot override entitlement.
 5. **Developer providers:** Ollama, local Whisper, self-hosted OpenAI-compatible endpoints, and future bring-your-own-provider integrations remain optional developer capabilities.
 
-The first production configuration is native OS transcription plus deterministic local intelligence and retrieval. It has the smallest download and memory impact. A deployed Gear X backend is required for reliable fallback on devices whose speech service lacks recorded-file or on-device support.
+The first production configuration is native OS transcription plus deterministic local intelligence and retrieval. It has the smallest download and memory impact. A deployed Gear X backend is an optional entitled enhancement for devices whose speech service lacks recorded-file or on-device support; absence of entitlement never disables local Gear X.
 
 ## Option evaluation
 

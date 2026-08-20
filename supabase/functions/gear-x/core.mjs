@@ -1,3 +1,5 @@
+import { cloudCapabilityForInference } from './billing.mjs';
+
 export const ERROR_CODES = Object.freeze({
   UNAUTHORIZED: 'UNAUTHORIZED',
   CONSENT_REQUIRED: 'CONSENT_REQUIRED',
@@ -8,6 +10,8 @@ export const ERROR_CODES = Object.freeze({
   PROVIDER_TIMEOUT: 'PROVIDER_TIMEOUT',
   MALFORMED_PROVIDER_OUTPUT: 'MALFORMED_PROVIDER_OUTPUT',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
+  ENTITLEMENT_REQUIRED: 'ENTITLEMENT_REQUIRED',
+  CLOUD_DISABLED: 'CLOUD_DISABLED',
 });
 
 const CAPABILITIES = new Set([
@@ -148,6 +152,24 @@ function bearerToken(req) {
   return header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 }
 
+function reservationError(reservation) {
+  if (reservation.reason === 'entitlement') {
+    return new BackendError(ERROR_CODES.ENTITLEMENT_REQUIRED, 'This cloud enhancement is not included.', 403);
+  }
+  if (reservation.reason === 'disabled' || reservation.reason === 'budget') {
+    return new BackendError(ERROR_CODES.CLOUD_DISABLED, 'Cloud enhancements are temporarily unavailable.', 503);
+  }
+  if (reservation.reason === 'plan_limit') {
+    return new BackendError(ERROR_CODES.PAYLOAD_TOO_LARGE, 'This request exceeds the plan limit.', 413);
+  }
+  if (reservation.reason === 'invalid') {
+    return new BackendError(ERROR_CODES.INVALID_REQUEST, 'Usage reservation is invalid.', 400);
+  }
+  return new BackendError(ERROR_CODES.QUOTA_EXCEEDED,
+    reservation.reason === 'rate' ? 'Request rate limit reached.' : 'Cloud allowance has been reached.',
+    429, reservation.reason === 'rate' ? 60 : undefined);
+}
+
 export function createGearXHandler(deps) {
   const limits = deps.limits;
   return async function handle(req) {
@@ -160,6 +182,11 @@ export function createGearXHandler(deps) {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: deps.corsHeaders(req) });
       const pathname = new URL(req.url).pathname.replace(/\/+$/, '');
       route = pathname.split('/gear-x').pop() || '/';
+      if (req.method === 'POST' && route === '/v1/billing/revenuecat/webhook') {
+        await deps.handleBillingWebhook(req);
+        status = 200; code = 'OK';
+        return success({ received: true });
+      }
       const token = bearerToken(req);
       if (!token) throw new BackendError(ERROR_CODES.UNAUTHORIZED, 'Authentication is required.', 401);
       const user = await deps.authenticate(token);
@@ -172,7 +199,12 @@ export function createGearXHandler(deps) {
       if (req.method === 'POST' && route === '/v1/mobile/session') {
         const expiresAt = deps.tokenExpiry(token);
         status = 200; code = 'OK';
-        return success({ token, expiresAt });
+        return success({ token, expiresAt, userId: user.id });
+      }
+      if (req.method === 'GET' && route === '/v1/entitlements') {
+        const entitlement = await deps.getEntitlementSummary(user.id);
+        status = 200; code = 'OK';
+        return success(entitlement);
       }
       if (req.headers.get('x-gear-x-remote-consent') !== 'granted') {
         throw new BackendError(ERROR_CODES.CONSENT_REQUIRED, 'Remote-processing consent is required.', 403);
@@ -194,16 +226,31 @@ export function createGearXHandler(deps) {
         if (actualBytes > limits.maxGenerateBytes) {
           throw new BackendError(ERROR_CODES.PAYLOAD_TOO_LARGE, 'Request context exceeds the limit.', 413);
         }
+        const cloudCapability = cloudCapabilityForInference(payload.capability);
+        if (!cloudCapability) throw new BackendError(ERROR_CODES.INVALID_REQUEST, 'Capability is unsupported.', 400);
         const reservation = await deps.reserveUsage({
-          userId: user.id, operation: 'intelligence', capability: payload.capability, bytes: actualBytes,
+          userId: user.id, capability: cloudCapability, provider: 'xai', bytes: actualBytes,
+          durationMs: 0, reservedTokens: Math.ceil((payload.system.length + payload.prompt.length) / 4) + payload.maxTokens,
         });
-        if (!reservation.allowed) {
-          throw new BackendError(ERROR_CODES.QUOTA_EXCEEDED,
-            reservation.reason === 'rate' ? 'Request rate limit reached.' : 'Daily intelligence limit reached.',
-            429, reservation.reason === 'rate' ? 60 : undefined);
+        if (!reservation.allowed) throw reservationError(reservation);
+        let generated;
+        try {
+          generated = await deps.generate(payload, req.signal, reservation.modelClass);
+        } catch (error) {
+          await deps.completeUsage(reservation.usageId, { status: 'provider_failed' });
+          throw error;
         }
-        const raw = await deps.generate(payload, req.signal);
-        const text = validateCapabilityOutput(payload.capability, raw);
+        const raw = typeof generated === 'string' ? generated : generated.text;
+        let text;
+        try { text = validateCapabilityOutput(payload.capability, raw); } catch (error) {
+          await deps.completeUsage(reservation.usageId, {
+            status: 'malformed_output', inputTokens: generated.inputTokens, outputTokens: generated.outputTokens,
+          });
+          throw error;
+        }
+        await deps.completeUsage(reservation.usageId, {
+          status: 'completed', inputTokens: generated.inputTokens, outputTokens: generated.outputTokens,
+        });
         status = 200; code = 'OK';
         return success({ text, usage: { remaining: reservation.remaining } });
       }
@@ -228,17 +275,20 @@ export function createGearXHandler(deps) {
         }
         const audio = validateAudio(file, durationMs, limits);
         const reservation = await deps.reserveUsage({
-          userId: user.id, operation: 'transcription', capability: 'speech-to-text', bytes: file.size,
+          userId: user.id, capability: 'cloud_transcription', provider: 'xai', bytes: file.size,
+          durationMs: audio.durationMs, reservedTokens: 0,
         });
-        if (!reservation.allowed) {
-          throw new BackendError(ERROR_CODES.QUOTA_EXCEEDED,
-            reservation.reason === 'rate' ? 'Request rate limit reached.' : 'Daily transcription limit reached.',
-            429, reservation.reason === 'rate' ? 60 : undefined);
+        if (!reservation.allowed) throw reservationError(reservation);
+        let result;
+        try { result = await deps.transcribe(audio, req.signal, reservation.modelClass); } catch (error) {
+          await deps.completeUsage(reservation.usageId, { status: 'provider_failed' });
+          throw error;
         }
-        const result = await deps.transcribe(audio, req.signal);
         if (!result || typeof result.text !== 'string' || !result.text.trim()) {
+          await deps.completeUsage(reservation.usageId, { status: 'malformed_output' });
           throw new BackendError(ERROR_CODES.MALFORMED_PROVIDER_OUTPUT, 'Provider returned no transcription.', 502);
         }
+        await deps.completeUsage(reservation.usageId, { status: 'completed' });
         status = 200; code = 'OK';
         return success({
           text: result.text.trim(),
@@ -262,4 +312,3 @@ export function createGearXHandler(deps) {
     }
   };
 }
-

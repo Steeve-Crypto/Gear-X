@@ -14,4 +14,4 @@ Backend entitlement, lifecycle, webhook, spoofing, duration/token, budget/rate t
 ## Rollback considerations
 Global cloud disablement preserves all local data and behavior. Database rollback follows function rollback and retains billing/usage records required for reconciliation.
 ## Completion status
-In progress. Specification and gap analysis are complete. Implementation, local verification, RevenueCat/store configuration, Supabase deployment, signed-build purchase tests, and live webhook/provider verification remain separately tracked.
+In progress. Specification, gap analysis, server plan/subscription schemas, RevenueCat lifecycle normalization, webhook persistence, capability enforcement, duration/token metering, per-capability/rate/size limits, and global budget/kill-switch reservations are implemented with backend fixtures. Mobile billing/UI, full verification, RevenueCat/store configuration, Supabase deployment, signed-build purchase tests, and live webhook/provider verification remain separately tracked.

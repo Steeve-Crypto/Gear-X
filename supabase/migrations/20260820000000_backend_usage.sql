@@ -93,17 +93,6 @@ as $$
 declare
   v_deleted bigint;
 begin
-  -- Remove inactive anonymous identities before their old usage rows disappear.
-  -- Active users retain an identity because every backend call creates metadata.
-  delete from auth.users as users
-  where users.is_anonymous is true
-    and users.created_at < now() - interval '35 days'
-    and not exists (
-      select 1 from public.gear_x_backend_usage as usage
-      where usage.user_id = users.id
-        and usage.created_at >= now() - interval '35 days'
-    );
-
   delete from public.gear_x_backend_usage where created_at < now() - interval '35 days';
   get diagnostics v_deleted = row_count;
   return v_deleted;

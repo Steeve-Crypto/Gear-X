@@ -19,7 +19,7 @@ const limits = {
 };
 
 function fixture(overrides = {}) {
-  const calls = { reservations: [], transcriptions: 0, generations: 0, logs: [] };
+  const calls = { reservations: [], completions: [], transcriptions: 0, generations: 0, logs: [], webhooks: 0 };
   const handler = createGearXHandler({
     limits,
     randomId: () => 'request-id',
@@ -28,8 +28,11 @@ function fixture(overrides = {}) {
     authenticate: async (token) => token === 'valid-token' ? { id: 'server-user' } : null,
     reserveUsage: async (request) => {
       calls.reservations.push(request);
-      return { allowed: true, remaining: 4 };
+      return { allowed: true, remaining: 4, usageId: 7, modelClass: 'standard' };
     },
+    completeUsage: async (usageId, result) => calls.completions.push({ usageId, ...result }),
+    getEntitlementSummary: async () => ({ planId: 'baseline', displayName: 'Local access', status: 'none', capabilities: [], allowances: {} }),
+    handleBillingWebhook: async () => { calls.webhooks += 1; },
     transcribe: async ({ durationMs }) => {
       calls.transcriptions += 1;
       return { text: 'A real transcript.', confidence: null, segments: [{
@@ -91,7 +94,7 @@ test('validates an authenticated mobile session', async () => {
     method: 'POST', headers: authHeaders,
   }));
   assert.equal(response.status, 200);
-  assert.deepEqual(await response.json(), { token: 'valid-token', expiresAt: 12345 });
+  assert.deepEqual(await response.json(), { token: 'valid-token', expiresAt: 12345, userId: 'server-user' });
 });
 
 test('requires explicit remote consent before usage', async () => {
@@ -110,6 +113,7 @@ test('accepts valid transcription and accounts server user', async () => {
   assert.equal((await response.json()).text, 'A real transcript.');
   assert.equal(calls.reservations[0].userId, 'server-user');
   assert.equal(calls.transcriptions, 1);
+  assert.deepEqual(calls.completions, [{ usageId: 7, status: 'completed' }]);
 });
 
 test('rejects invalid and oversized audio', async () => {
@@ -133,7 +137,8 @@ test('validates structured intelligence output', async () => {
   assert.equal(response.status, 200);
   assert.match((await response.json()).text, /Release plan/);
   assert.equal(calls.generations, 1);
-  assert.equal(calls.reservations[0].capability, 'summarization');
+  assert.equal(calls.reservations[0].capability, 'cloud_summarization');
+  assert.equal(calls.completions[0].status, 'completed');
 });
 
 test('normalizes malformed provider output', async () => {
@@ -166,6 +171,51 @@ test('enforces quota and rate-limit reservations', async () => {
     assert.equal(calls.generations, 0);
     if (reason === 'rate') assert.equal(response.headers.get('retry-after'), '60');
   }
+});
+
+test('baseline entitlement and global kill switch fail before provider access', async () => {
+  for (const [reason, code] of [['entitlement', ERROR_CODES.ENTITLEMENT_REQUIRED], ['disabled', ERROR_CODES.CLOUD_DISABLED]]) {
+    const { handler, calls } = fixture({ reserveUsage: async (request) => {
+      calls.reservations.push(request);
+      return { allowed: false, reason, remaining: 0 };
+    } });
+    const response = await handler(generateRequest({ plan: 'paid', remaining: 999999 }));
+    assert.equal((await response.json()).error.code, code);
+    assert.equal(calls.generations, 0);
+    assert.equal(calls.reservations[0].userId, 'server-user');
+    assert.equal('plan' in calls.reservations[0], false);
+  }
+});
+
+test('meters transcription duration and intelligence token reservation', async () => {
+  const { handler, calls } = fixture();
+  await handler(transcriptionRequest({ durationMs: 12_345 }));
+  await handler(generateRequest({ maxTokens: 200 }));
+  assert.equal(calls.reservations[0].durationMs, 12_345);
+  assert.equal(calls.reservations[0].reservedTokens, 0);
+  assert.ok(calls.reservations[1].reservedTokens >= 200);
+});
+
+test('serves server-authoritative entitlement state', async () => {
+  const { handler } = fixture({ getEntitlementSummary: async (userId) => ({
+    planId: 'cloud_standard', displayName: 'Cloud access', status: 'active', userId,
+    capabilities: ['cloud_transcription'], allowances: { transcriptionDailyMsRemaining: 10_000 },
+  }) });
+  const response = await handler(new Request('https://example.test/functions/v1/gear-x/v1/entitlements', {
+    headers: { Authorization: 'Bearer valid-token' },
+  }));
+  const body = await response.json();
+  assert.equal(body.userId, 'server-user');
+  assert.deepEqual(body.capabilities, ['cloud_transcription']);
+});
+
+test('billing webhook is handled outside mobile authentication', async () => {
+  const { handler, calls } = fixture();
+  const response = await handler(new Request('https://example.test/functions/v1/gear-x/v1/billing/revenuecat/webhook', {
+    method: 'POST', body: '{}', headers: { Authorization: 'RevenueCat test-secret' },
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(calls.webhooks, 1);
 });
 
 test('rejects oversized and malformed intelligence requests', async () => {
@@ -203,4 +253,3 @@ test('client and committed source contain no secret values', async () => {
     assert.doesNotMatch(value, /XAI_API_KEY\s*=\s*[^\s#]+/, file);
   }
 });
-

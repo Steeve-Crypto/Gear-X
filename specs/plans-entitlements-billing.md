@@ -55,7 +55,7 @@ Billing records contain Supabase user ID, RevenueCat customer/product/event iden
 Supabase Auth/Postgres/Edge Functions, RevenueCat iOS/Android SDK and verified webhooks, Apple App Store Connect, Google Play Console, existing provider routers, consent settings, local deterministic agents, and SQLite.
 
 ## Open implementation decisions
-Final prices and marketing plan names, Apple/Google product IDs, RevenueCat project/entitlement/offering IDs, grace-period policy, plan allowance values, model classes, cost-rate configuration, mobile CAPTCHA UX, later account-linking UX, and whether device attestation is added.
+Free/Pro/Max names, $0/$9.99/$19.99 monthly prices, monthly product IDs, RevenueCat entitlement/package IDs, transcription and intelligence allowances, per-user spend ceilings, and capability model classes are approved in `specs/launch-plans-pricing.md`. Remaining decisions are production global budgets, provider enablement, store grace/territory/tax configuration, mobile CAPTCHA or attestation UX, later account linking, and future annual products.
 
 ## Verification
 Run domain lifecycle tests, backend route/entitlement/metering/webhook/security tests, mobile billing/provider/fallback/UI tests, `npm run validate`, Expo Doctor, Android bundle export, and secret scans. Live purchase, restore, webhook, App Store, Play Billing, Supabase, and provider checks remain external until projects, products, credentials, signed builds, and sandbox accounts exist.
